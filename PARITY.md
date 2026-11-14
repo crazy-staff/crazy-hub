@@ -9,17 +9,18 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 
 | Area     | Part                                                                                                                                      | Status |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Accounts | Sign in / sign up, OAuth providers, profile, preferences                                                                                  | ⬜     |
+| Accounts | Sign in / sign up, OAuth providers, profile, preferences                                                                                  | ✅     |
 | Accounts | In-app notifications (no email yet)                                                                                                       | ⬜     |
 | Portal   | Feedback list, filters, post page, comments, up/down votes                                                                                | ⬜     |
 | Portal   | Roadmaps (one per area: trainer, docs, Discord, website, testers)                                                                         | ⬜     |
 | Portal   | Changelog with categories                                                                                                                 | ⬜     |
-| Portal   | Docs (new module, fumadocs-core): game/renderer variants, search, TOC, contributors                                                       | ⬜     |
-| Portal   | Downloads per product, game and renderer (new, from GitHub releases) — #19                                                                | ⬜     |
+| Portal   | Docs (new module, fumadocs-core): project variants (decision 13), search, TOC, contributors                                               | ⬜     |
+| Portal   | Downloads per project: platforms, stable/beta/alpha channels (new, private releases) — #19                                                | ⬜     |
 | Admin    | Feedback inbox, moderation, merging, statuses, tags, boards                                                                               | ⬜     |
 | Admin    | Roadmap builder                                                                                                                           | ⬜     |
 | Admin    | Changelog editor                                                                                                                          | ⬜     |
 | Admin    | Docs editor: categories, order, translations side by side, drafts, scheduled publish, history with diff/restore, authors and contributors | ⬜     |
+| Admin    | Projects, dimensions, role categories and per-project roles (decision 13)                                                                 | ⬜     |
 | Admin    | Users, members, roles (tester ranks)                                                                                                      | ⬜     |
 | Admin    | Settings: general, portal (sidebar links, welcome text), sign-in options, who can sign up                                                 | ⬜     |
 | Admin    | Developers: API keys, webhooks                                                                                                            | ⬜     |
