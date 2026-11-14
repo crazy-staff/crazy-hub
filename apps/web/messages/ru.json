@@ -236,5 +236,10 @@
   "perm_docs_publish": "Публикация страниц документации",
   "perm_downloads_manage": "Управление релизами на странице загрузок",
   "perm_downloads_alpha": "Загрузка альфа-сборок",
-  "roles_person_change": "Выбрать другого"
+  "roles_person_change": "Выбрать другого",
+  "admin_group_overview": "Обзор",
+  "admin_overview": "Обзор",
+  "admin_group_hub": "Хаб",
+  "admin_nav_label": "Навигация админки",
+  "admin_back_to_hub": "Назад в хаб"
 }
