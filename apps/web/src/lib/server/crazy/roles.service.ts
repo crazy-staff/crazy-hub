@@ -210,3 +210,52 @@ export async function ownerExists(): Promise<boolean> {
     .limit(1)
   return Boolean(row)
 }
+
+/**
+ * Gives the Owner role to the caller while nobody holds it. Needs Discord with 2FA (checked live) and
+ * no other role of the Team category. Returns why it can't, or `ok`.
+ */
+export async function claimOwner(
+  principalId: PrincipalId,
+  userId: UserId
+): Promise<
+  | 'ok'
+  | 'owner-exists'
+  | 'discord-missing'
+  | 'discord-no-mfa'
+  | 'discord-unknown'
+  | 'exclusive-conflict'
+> {
+  if (await ownerExists()) return 'owner-exists'
+  const [ownerRole] = await db
+    .select({ id: crazyRoles.id })
+    .from(crazyRoles)
+    .where(eq(crazyRoles.slug, 'owner'))
+    .limit(1)
+  if (!ownerRole) return 'owner-exists'
+  const role = await getRole(ownerRole.id)
+  if (!role) return 'owner-exists'
+  const discord = await refreshDiscordStatus(userId)
+  if (discord === 'no-discord') return 'discord-missing'
+  if (discord === 'no-mfa') return 'discord-no-mfa'
+  if (discord === 'unknown') return 'discord-unknown'
+  const { exclusivityConflict } = await import('@/lib/shared/crazy/roles')
+  if (exclusivityConflict(await listAssignments(principalId), role, null))
+    return 'exclusive-conflict'
+  await db
+    .insert(crazyRoleAssignments)
+    .values({ roleId: role.id, principalId, projectId: null, grantedBy: principalId })
+    .onConflictDoNothing()
+  forgetPerRequestPrefix(MEMO_PREFIX)
+  log.info({ principal_id: principalId }, 'owner role claimed')
+  return 'ok'
+}
+
+/** `claimOwner` for the signed-in caller, who must be a Quackback workspace admin. */
+export async function claimOwnerForCaller() {
+  const { getOptionalAuth } = await import('@/lib/server/functions/auth-helpers')
+  const auth = await getOptionalAuth()
+  if (!auth) throw new Error('Authentication required')
+  if (auth.principal.role !== 'admin') throw new Error('Access denied: workspace admins only')
+  return claimOwner(auth.principal.id, auth.user.id)
+}

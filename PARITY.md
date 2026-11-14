@@ -20,7 +20,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 | Admin    | Roadmap builder                                                                                                                           | ⬜     |
 | Admin    | Changelog editor                                                                                                                          | ⬜     |
 | Admin    | Docs editor: categories, order, translations side by side, drafts, scheduled publish, history with diff/restore, authors and contributors | ⬜     |
-| Admin    | Projects, dimensions, role categories and per-project roles (decision 13)                                                                 | 🟨     |
+| Admin    | Projects, dimensions, role categories and per-project roles (decision 13)                                                                 | ✅     |
 | Admin    | Users, members, roles (tester ranks)                                                                                                      | ⬜     |
 | Admin    | Settings: general, portal (sidebar links, welcome text), sign-in options, who can sign up                                                 | ⬜     |
 | Admin    | Developers: API keys, webhooks                                                                                                            | ⬜     |
