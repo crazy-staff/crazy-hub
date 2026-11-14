@@ -14,11 +14,7 @@ function scopeFor(workspaceKey: string) {
     workspace: {
       workspaceKey,
       revision: 1,
-      routing: {
-        primaryHostname: 'ws.example.com',
-        hostnames: [],
-        baseUrl: 'https://ws.example.com',
-      },
+      routing: { primaryHostname: 'ws.example.com', hostnames: [], baseUrl: 'https://ws.example.com' },
       email: { from: null, mailSlug: 'acme' },
     },
     db: {},

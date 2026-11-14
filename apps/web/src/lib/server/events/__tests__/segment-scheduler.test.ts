@@ -37,7 +37,10 @@ vi.mock('@/lib/server/db', () => {
   }
 })
 
-import { listEvaluationSchedules, segmentEvaluationSchedules } from '../segment-scheduler'
+import {
+  listEvaluationSchedules,
+  segmentEvaluationSchedules,
+} from '../segment-scheduler'
 
 beforeEach(() => {
   rows = []

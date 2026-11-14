@@ -2,4 +2,9 @@
  *  Lives in `shared` so client, server, and shared code can all reference it
  *  without crossing the server-only `@/lib/server` boundary. */
 export type JsonValue =
-  string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[]

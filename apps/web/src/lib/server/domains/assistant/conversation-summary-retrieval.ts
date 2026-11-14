@@ -215,25 +215,27 @@ export const conversationSummariesKnowledgeSource: KnowledgeSource = {
       customerPrincipalId: opts.customerPrincipalId,
       conversationId: opts.conversationId,
     })
-    return rows.map((r): RetrievedItem => ({
-      id: r.conversationId,
-      sourceType: 'summary' as const,
-      title: PAST_CONVERSATION_TITLE,
-      excerpt: r.summary.slice(0, KNOWLEDGE_SNIPPET_CHARS),
-      score: r.score,
-      updatedAt: r.createdAt.toISOString(),
-      citation: {
-        type: 'summary' as const,
+    return rows.map(
+      (r): RetrievedItem => ({
         id: r.conversationId,
+        sourceType: 'summary' as const,
         title: PAST_CONVERSATION_TITLE,
-        // No cross-surface-safe URL: unlike a KB article or a post, a past
-        // conversation isn't necessarily viewable from wherever this
-        // citation renders (e.g. the widget), so this stays title-referential
-        // only, like a snippet's.
-        url: '',
-        // Another conversation's content is never customer-facing material.
-        internal: true,
-      },
-    }))
+        excerpt: r.summary.slice(0, KNOWLEDGE_SNIPPET_CHARS),
+        score: r.score,
+        updatedAt: r.createdAt.toISOString(),
+        citation: {
+          type: 'summary' as const,
+          id: r.conversationId,
+          title: PAST_CONVERSATION_TITLE,
+          // No cross-surface-safe URL: unlike a KB article or a post, a past
+          // conversation isn't necessarily viewable from wherever this
+          // citation renders (e.g. the widget), so this stays title-referential
+          // only, like a snippet's.
+          url: '',
+          // Another conversation's content is never customer-facing material.
+          internal: true,
+        },
+      })
+    )
   },
 }

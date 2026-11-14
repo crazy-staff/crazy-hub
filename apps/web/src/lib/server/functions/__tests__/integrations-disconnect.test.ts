@@ -93,11 +93,7 @@ it('locks and re-reads before unregistering a disconnect', async () => {
 })
 
 it('refuses to disconnect a reconnect that won the advisory lock', async () => {
-  mocks.lockedRead.mockResolvedValue({
-    ...row,
-    secrets: 'new-token',
-    connectedAt: new Date(300_000),
-  })
+  mocks.lockedRead.mockResolvedValue({ ...row, secrets: 'new-token', connectedAt: new Date(300_000) })
   await expect(deleteIntegrationFn({ data: { id: 'int_1' } })).rejects.toThrow('reconnected')
   expect(mocks.unregister).not.toHaveBeenCalled()
   expect(mocks.del).not.toHaveBeenCalled()

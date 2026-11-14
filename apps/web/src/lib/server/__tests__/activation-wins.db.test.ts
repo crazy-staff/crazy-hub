@@ -136,12 +136,14 @@ it('counts a helpful vote from someone outside the team as the help center win',
   // Publishing the article is the team's own act, not the win.
   expect(await detectFirstWin(state)).toEqual({ reached: false, reachedAt: null })
   // A signed-out visitor's vote has no principal: still someone outside the team.
-  await testDb.insert(helpCenterArticleFeedback).values({
-    articleId: article!.id,
-    principalId: null,
-    helpful: true,
-    createdAt: new Date('2026-03-01'),
-  })
+  await testDb
+    .insert(helpCenterArticleFeedback)
+    .values({
+      articleId: article!.id,
+      principalId: null,
+      helpful: true,
+      createdAt: new Date('2026-03-01'),
+    })
   expect(await detectFirstWin(state)).toEqual({
     reached: true,
     reachedAt: '2026-03-01T00:00:00.000Z',

@@ -85,13 +85,13 @@ export function ensureEmailLogSink(): void {
   // the database when tenants are off or no workspace is in scope.
   setSesTenantHooks({
     tenantFor: async (ctx) => {
-      const { tenantForSend } =
-        await import('@/lib/server/domains/channel-accounts/ses-tenant-state')
+      const { tenantForSend } = await import('@/lib/server/domains/channel-accounts/ses-tenant-state')
       return tenantForSend(ctx)
     },
     onTenantPaused: async (tenantName, detail) => {
-      const { recordSesTenantPaused } =
-        await import('@/lib/server/domains/channel-accounts/ses-tenant-status')
+      const { recordSesTenantPaused } = await import(
+        '@/lib/server/domains/channel-accounts/ses-tenant-status'
+      )
       await recordSesTenantPaused(tenantName, detail)
     },
   })

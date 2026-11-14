@@ -27,7 +27,7 @@ vi.stubGlobal('fetch', fetchMock)
 
 import { rehostExternalImages } from '../rehost-images'
 import { safeFetch, SsrfError, ResponseTooLargeError } from '@/lib/server/content/ssrf-guard'
-import { isS3Usable, uploadImageBuffer } from '@/lib/server/storage/s3'
+import { isS3Usable, uploadImageBuffer } from "@/lib/server/storage/s3"
 
 const safeFetchMock = safeFetch as unknown as ReturnType<typeof vi.fn>
 const isS3UsableMock = isS3Usable as unknown as ReturnType<typeof vi.fn>

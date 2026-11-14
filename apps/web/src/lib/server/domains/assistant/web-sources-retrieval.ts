@@ -90,19 +90,21 @@ export const webpageKnowledgeSource: KnowledgeSource = {
   sourceType: 'webpage',
   async retrieve(query, _ceiling, opts) {
     const rows = await retrieveWebSources(query, { topK: opts.topK })
-    return rows.map((w): RetrievedItem => ({
-      id: w.id,
-      sourceType: 'webpage' as const,
-      title: w.title,
-      excerpt: w.content.slice(0, KNOWLEDGE_SNIPPET_CHARS),
-      score: w.score,
-      updatedAt: w.updatedAt.toISOString(),
-      citation: {
-        type: 'webpage' as const,
+    return rows.map(
+      (w): RetrievedItem => ({
         id: w.id,
+        sourceType: 'webpage' as const,
         title: w.title,
-        url: w.url,
-      },
-    }))
+        excerpt: w.content.slice(0, KNOWLEDGE_SNIPPET_CHARS),
+        score: w.score,
+        updatedAt: w.updatedAt.toISOString(),
+        citation: {
+          type: 'webpage' as const,
+          id: w.id,
+          title: w.title,
+          url: w.url,
+        },
+      })
+    )
   },
 }
