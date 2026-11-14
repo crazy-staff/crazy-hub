@@ -5,11 +5,10 @@
 import { cn } from '@crazy-staff/ui'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronUp } from 'lucide-react'
-import type { PostId } from '@quackback/ids'
-import { usePostVote } from '@/lib/client/hooks/use-post-vote'
 import { useSessionContext } from '@/lib/client/hooks/use-root-context'
 import { m } from '../../paraglide/messages.js'
 import { openSignIn } from '../auth/auth-dialog'
+import { useIdeaVote } from '../../lib/idea-mutations'
 
 export function VoteButton({
   postId,
@@ -23,7 +22,7 @@ export function VoteButton({
   const session = useSessionContext()
   const navigate = useNavigate()
   const signedIn = !!session?.user && session.user.principalType !== 'anonymous'
-  const vote = usePostVote({ postId: postId as PostId, voteCount, enabled: true })
+  const vote = useIdeaVote(postId, voteCount)
   return (
     <button
       type="button"
@@ -37,7 +36,7 @@ export function VoteButton({
           void navigate({ to: '.', search: openSignIn })
           return
         }
-        vote.handleVote()
+        vote.toggle()
       }}
       className={cn(
         'squircle flex shrink-0 flex-col items-center justify-center rounded-control border font-semibold tabular-nums outline-none',

@@ -5,11 +5,11 @@
 import { Field, Input, Select, Textarea } from '@crazy-staff/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useCreatePublicPost } from '@/lib/client/mutations/portal-posts'
 import { useSimilarPosts } from '@/lib/client/hooks/use-similar-posts'
 import { m } from '../../paraglide/messages.js'
 import { FormDialog, text } from '../form-dialog'
 import type { HubProject } from '../../lib/projects'
+import { useCreateIdea } from '../../lib/idea-mutations'
 
 export function NewIdeaDialog({
   project,
@@ -22,7 +22,7 @@ export function NewIdeaDialog({
   onClose: () => void
 }) {
   const navigate = useNavigate()
-  const create = useCreatePublicPost()
+  const create = useCreateIdea()
   const [board, setBoard] = useState<string | null>(boardId ?? project.boards[0]?.id ?? null)
   const [title, setTitle] = useState('')
   const similar = useSimilarPosts({ title })
@@ -40,7 +40,7 @@ export function NewIdeaDialog({
       onSubmit={async (form) => {
         if (!board) throw new Error('missing')
         const created = await create.mutateAsync({
-          boardId: board as never,
+          boardId: board,
           title: text(form, 'title'),
           content: text(form, 'content'),
         })
