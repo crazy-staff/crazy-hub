@@ -32,14 +32,10 @@
   "portal_private_no_access": "У вашего аккаунта нет доступа к этому порталу. Попросите команду пригласить вас.",
   "nav_downloads": "Загрузки",
   "page_downloads_description": "Сборки для вашей игры и рендерера с инструкцией по установке.",
-  "context_product": "Продукт",
-  "context_game": "Игра",
-  "context_renderer": "Рендерер",
   "status_planned": "Запланировано",
   "status_later": "Позже",
   "nav_home": "Главная",
   "page_home_description": "Всё о проектах Crazy в одном месте: идеи, дорожные карты, списки изменений, документация и загрузки. Выберите продукт, чтобы начать.",
-  "context_shared": "общее",
   "sidebar_open": "Открыть боковую панель",
   "auth_signin_title": "Вход",
   "auth_signup_title": "Создать аккаунт",
@@ -123,5 +119,6 @@
   "profile_comments": "Комментарии",
   "profile_votes": "Голоса",
   "profile_recent": "Последние идеи",
-  "profile_no_posts": "Пока нет идей."
+  "profile_no_posts": "Пока нет идей.",
+  "context_project": "Проект"
 }

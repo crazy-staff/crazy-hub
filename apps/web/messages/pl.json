@@ -32,14 +32,10 @@
   "portal_private_no_access": "Twoje konto nie ma dostępu do tego portalu. Poproś zespół o zaproszenie.",
   "nav_downloads": "Pobieranie",
   "page_downloads_description": "Buildy dla Twojej gry i renderera, z instrukcją instalacji.",
-  "context_product": "Produkt",
-  "context_game": "Gra",
-  "context_renderer": "Renderer",
   "status_planned": "Planowane",
   "status_later": "Później",
   "nav_home": "Start",
   "page_home_description": "Wszystko o projektach Crazy w jednym miejscu: pomysły, plany prac, listy zmian, dokumentacja i pobieranie. Wybierz produkt, żeby zacząć.",
-  "context_shared": "wspólne",
   "sidebar_open": "Otwórz panel boczny",
   "auth_signin_title": "Zaloguj się",
   "auth_signup_title": "Załóż konto",
@@ -123,5 +119,6 @@
   "profile_comments": "Komentarze",
   "profile_votes": "Głosy",
   "profile_recent": "Ostatnie pomysły",
-  "profile_no_posts": "Brak pomysłów."
+  "profile_no_posts": "Brak pomysłów.",
+  "context_project": "Projekt"
 }

@@ -5,9 +5,8 @@
  * scrolls on its own, with a progressive blur at the bottom while there is more to see and at the top
  * once scrolled.
  *
- * Sidebar order: the hub's name, the rows common to the whole hub, the product picker (product, then its
- * game and renderer), the picked product's sections. Links like terms, contact and GitHub go at the
- * bottom later.
+ * Sidebar order: the hub's name, the rows common to the whole hub, the project picker, the picked
+ * project's sections (decision 13). Links like terms, contact and GitHub go at the bottom later.
  *
  * Until `@crazy-staff/ui` 0.2.1 (crazy-staff/crazy-ui#3) the header row, the collapse button and the
  * row/group spacing are set here to the docs sidebar's values; afterwards the library's own parts match.
@@ -18,11 +17,11 @@ import { PanelLeft } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { m } from '../paraglide/messages.js'
 import { COMMON, navItemOf, sectionPath } from '../lib/nav'
-import { PRODUCTS, SECTION_META, locate } from '../lib/products'
+import { SECTION_META, locate, useProjects } from '../lib/projects'
 import { AccountMenu } from './account-menu'
 import { AuthDialog } from './auth/auth-dialog'
-import { ContextPickers } from './context-pickers'
 import { LanguageMenu } from './language-menu'
+import { ProjectPicker } from './project-picker'
 import { ThemeToggle } from './theme-toggle'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -67,7 +66,7 @@ function CollapseButton({ className }: { className?: string }) {
   )
 }
 
-/** The name of the whole hub, not of one product. */
+/** The name of the whole hub, not of one project. */
 function Brand() {
   return (
     <Link
@@ -84,9 +83,11 @@ function Brand() {
 
 function AppSidebar() {
   const pathname = useLocation({ select: (l) => l.pathname })
-  const active = navItemOf(pathname)
-  // outside a product (the start page, the admin) the first product is shown
-  const product = locate(pathname).product ?? PRODUCTS[0]
+  const projects = useProjects()
+  const active = navItemOf(projects, pathname)
+  const here = locate(projects, pathname)
+  // outside a project (the start page, settings) the first project is shown
+  const project = here.project ?? projects[0]
   return (
     <Sidebar label={m.nav_label()}>
       {/* the docs sidebar's title row; it keeps its own hover, the gliding block is for the rows */}
@@ -107,31 +108,30 @@ function AppSidebar() {
             </Sidebar.Item>
           ))}
         </Sidebar.Group>
-        <div className="flex flex-col gap-3">
-          <ContextPickers product={product} />
-          {/* no group label: the picker above already names the product */}
-          <Sidebar.Group aria-label={product.title} classNames={{ list: 'gap-0' }}>
-            {product.sections.map((section) => {
-              const meta = SECTION_META[section.id]
-              const to = sectionPath(product, section.id)
-              return (
-                <Sidebar.Item
-                  key={section.id}
-                  render={
-                    <Link
-                      to="/$product/$section"
-                      params={{ product: product.slug, section: section.id }}
-                    />
-                  }
-                  icon={<meta.icon />}
-                  active={active === to}
-                >
-                  {meta.label()}
-                </Sidebar.Item>
-              )
-            })}
-          </Sidebar.Group>
-        </div>
+        {project && (
+          <div className="flex flex-col gap-3">
+            <ProjectPicker projects={projects} project={project} section={here.section} />
+            {/* no group label: the picker above already names the project */}
+            <Sidebar.Group aria-label={project.name} classNames={{ list: 'gap-0' }}>
+              {project.sections.map((section) => {
+                const meta = SECTION_META[section]
+                const to = sectionPath(project, section)
+                return (
+                  <Sidebar.Item
+                    key={section}
+                    render={
+                      <Link to="/$project/$section" params={{ project: project.slug, section }} />
+                    }
+                    icon={<meta.icon />}
+                    active={active === to}
+                  >
+                    {meta.label()}
+                  </Sidebar.Item>
+                )
+              })}
+            </Sidebar.Group>
+          </div>
+        )}
       </Sidebar.Content>
     </Sidebar>
   )

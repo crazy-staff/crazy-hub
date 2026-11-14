@@ -8,6 +8,7 @@ import { useLocation } from '@tanstack/react-router'
 import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, type ReactNode } from 'react'
 import { navPosition } from '../lib/nav'
+import { useProjects } from '../lib/projects'
 
 export const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -98,9 +99,10 @@ export function PageFrame({
 /** A page: title (1.75em semibold) and description (text-lg muted) as in the docs, then the content. */
 export function Page({ title, description, actions, toc, className, children }: PageProps) {
   const pathname = useLocation({ select: (l) => l.pathname })
+  const projects = useProjects()
   return (
     <PageFrame toc={toc} className={className}>
-      <PageTransition id={pathname} position={navPosition(pathname)}>
+      <PageTransition id={pathname} position={navPosition(projects, pathname)}>
         <header data-stagger="" className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="me-auto text-[1.75em] font-semibold">{title}</h1>

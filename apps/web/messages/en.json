@@ -32,14 +32,10 @@
   "portal_private_no_access": "Your account doesn't have access to this portal. Ask the team to invite you.",
   "nav_downloads": "Downloads",
   "page_downloads_description": "Builds for your game and renderer, with install notes.",
-  "context_product": "Product",
-  "context_game": "Game",
-  "context_renderer": "Renderer",
   "status_planned": "Planned",
   "status_later": "Later",
   "nav_home": "Home",
   "page_home_description": "Everything about the Crazy projects in one place: ideas, roadmaps, changelogs, docs and downloads. Pick a product to start.",
-  "context_shared": "shared",
   "sidebar_open": "Open sidebar",
   "auth_signin_title": "Sign in",
   "auth_signup_title": "Create an account",
@@ -123,5 +119,6 @@
   "profile_comments": "Comments",
   "profile_votes": "Votes",
   "profile_recent": "Recent ideas",
-  "profile_no_posts": "No ideas yet."
+  "profile_no_posts": "No ideas yet.",
+  "context_project": "Project"
 }

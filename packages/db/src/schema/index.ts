@@ -76,3 +76,6 @@ export * from './integration-sync'
 
 export * from './workspace-assistant'
 export * from './onboarding-emails'
+
+// crazy-hub's own tables (decision 13), kept in one file
+export * from './crazy-hub'

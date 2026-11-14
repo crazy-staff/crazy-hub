@@ -34,6 +34,17 @@ accounts and tester ranks for the **Crazy Gothic Trainer**. Built on **Quackback
   `apps/web/package.json` and `.github/workflows/ci.yml`. The dependency-graph snapshot
   `apps/web/src/lib/server/policy/dep-graph/GRAPH.md` lists `src/app` too; after an upstream merge,
   regenerate it with `bunx vitest run apps/web/src/lib/server/policy/dep-graph -u`.
+- **Our backend additions** (decision 13) live in their own files: tables in
+  `packages/db/src/schema/crazy-hub.ts` (exported by one line in `schema/index.ts` and one marked block
+  in `apps/web/src/lib/server/db.ts`, all `crazy_*`, plain UUID ids), server code in `apps/web/src/lib/server/crazy/`, shared rules and the permission list in
+  `apps/web/src/lib/shared/crazy/`. Per-project rights go through `requireProjectPermission`, never
+  through Quackback's team role.
+- **Migrations:** hand-written SQL in `packages/db/drizzle/` plus a `_journal.json` entry, additive and
+  replay-safe (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`), named FKs as drizzle names them. The migrator
+  applies only entries whose `when` is above the newest applied one, so a new one of ours takes the newest
+  `when` in the journal + 1 (upstream steps by 100000, so its later migrations still sort after ours). Check with
+  `bun run --cwd packages/db db:check-drift`; after adding one, update the `CONTRACT.md` and
+  `MATRIX.md` snapshots (`bunx vitest run apps/web/src/lib/server/policy -u`).
 - Use **bun 1.4.0** (the `packageManager` pin): newer bun installs duplicate `drizzle-orm` copies and the
   typecheck fails with thousands of false errors. `bun run --cwd apps/web typecheck:app` checks the new app
   and everything it imports; the full `typecheck` covers the old UI and no longer applies.

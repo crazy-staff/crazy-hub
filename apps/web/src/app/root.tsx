@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { useEffect, type ReactNode } from 'react'
 import { getBootstrapData, type BootstrapData } from '@/lib/server/functions/bootstrap'
+import { getHubContextFn } from '@/lib/server/crazy/functions'
 import { createRouteContextMemo } from '@/lib/client/route-context-memo'
 import { resolveDocumentTheme, SYSTEM_THEME_SCRIPT } from '@/lib/shared/theme'
 import type { Role } from '@/lib/shared/roles'
@@ -36,10 +37,14 @@ export interface RouterContext {
   registeredAuthProviders?: string[]
 }
 
-// The settings arrive already redacted: getBootstrapData scrubs them on the server.
+// The settings arrive already redacted: getBootstrapData scrubs them on the server. `hub` is crazy-hub's
+// own context (decision 13): the projects and the signed-in person's roles.
 async function loadRootContext() {
-  const { settings, ...bootstrap } = await getBootstrapData()
-  return { ...bootstrap, settings }
+  const [{ settings, ...bootstrap }, hub] = await Promise.all([
+    getBootstrapData(),
+    getHubContextFn(),
+  ])
+  return { ...bootstrap, settings, hub }
 }
 type RootContext = Awaited<ReturnType<typeof loadRootContext>>
 
