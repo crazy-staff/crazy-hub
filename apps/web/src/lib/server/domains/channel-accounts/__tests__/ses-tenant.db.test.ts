@@ -86,9 +86,7 @@ const tenantClient: SesTenantClient = {
       return {} as never
     }
     if (kind(command) === 'GetReputationEntityCommand') {
-      const known = [...tenants.values()].some(
-        (t) => t.arn === input.ReputationEntityReference
-      )
+      const known = [...tenants.values()].some((t) => t.arn === input.ReputationEntityReference)
       if (!known) throw serviceError('NotFoundException', 404)
       return {
         ReputationEntity: {
@@ -114,7 +112,10 @@ const identityClient: SesIdentityClient = {
   },
 }
 
-const deps = { tenant: { client: tenantClient }, identity: { client: identityClient, region: 'eu-west-2' } }
+const deps = {
+  tenant: { client: tenantClient },
+  identity: { client: identityClient, region: 'eu-west-2' },
+}
 const associationsOf = () => [...(tenants.get(NAME)?.associations ?? [])].sort()
 
 const fixture = await createDbTestFixture({
@@ -124,7 +125,10 @@ const fixture = await createDbTestFixture({
 })
 
 async function seedTeam(): Promise<TeamId> {
-  const [team] = await testDb.insert(teams).values({ name: `Team-${createId('team')}` }).returning()
+  const [team] = await testDb
+    .insert(teams)
+    .values({ name: `Team-${createId('team')}` })
+    .returning()
   return team.id
 }
 
@@ -268,7 +272,12 @@ describe.skipIf(!fixture.available)('ses tenants (real DB, rolled back)', () => 
       await testDb.delete(emailSendingDomains).where(eq(emailSendingDomains.id, gone.id))
       await testDb
         .delete(emailSendingDomains)
-        .where(and(eq(emailSendingDomains.domain, 'shared.test'), eq(emailSendingDomains.owningTeamId, teamId)))
+        .where(
+          and(
+            eq(emailSendingDomains.domain, 'shared.test'),
+            eq(emailSendingDomains.owningTeamId, teamId)
+          )
+        )
       await reconcileSesTenant(deps)
 
       expect(associationsOf()).not.toContain(arnOf('identity', 'gone.test'))

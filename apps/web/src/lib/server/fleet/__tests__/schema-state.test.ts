@@ -367,12 +367,18 @@ describe('intent', () => {
     await seed('done')
     await seed('behind')
     const claimed = await claimWorkspaces({ limit: 5, leaseMs: 60_000, workerId: 'w1' })
-    await completeWorkspace(claimed.find((c) => c.workspaceKey === 'done')!, {
-      version: TARGET,
-      appliedCount: 228,
-      postconditionsOk: true,
-    })
-    await failWorkspace(claimed.find((c) => c.workspaceKey === 'behind')!, 'transient')
+    await completeWorkspace(
+      claimed.find((c) => c.workspaceKey === 'done')!,
+      {
+        version: TARGET,
+        appliedCount: 228,
+        postconditionsOk: true,
+      }
+    )
+    await failWorkspace(
+      claimed.find((c) => c.workspaceKey === 'behind')!,
+      'transient'
+    )
 
     await setTargetVersion({ targetVersion: TARGET })
 

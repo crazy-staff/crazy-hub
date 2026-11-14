@@ -8,6 +8,7 @@ export const trainer: HubProject = {
   short: 'GT',
   description: 'In-game trainer for Gothic',
   sections: ['ideas', 'roadmap', 'changelog', 'docs', 'downloads'],
+  boards: [{ id: 'b-ideas', slug: 'ideas', name: 'Ideas' }],
   dimensions: [
     {
       slug: 'game',

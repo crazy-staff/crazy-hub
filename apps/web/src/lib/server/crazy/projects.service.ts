@@ -2,11 +2,15 @@
  * Reads of crazy-hub's projects and dimensions (decision 13). Writes come with the admin editor.
  */
 import {
+  and,
   asc,
+  boards,
   crazyDimensions,
+  crazyProjectBoards,
   crazyDimensionValues,
   crazyProjects,
   db,
+  eq,
   inArray,
   isNull,
   type CrazySection,
@@ -61,6 +65,17 @@ export async function listHubProjects(): Promise<HubProject[]> {
         .orderBy(asc(crazyDimensionValues.position), asc(crazyDimensionValues.label))
     : []
 
+  const boardRows = await db
+    .select({
+      projectId: crazyProjectBoards.projectId,
+      id: boards.id,
+      slug: boards.slug,
+      name: boards.name,
+    })
+    .from(crazyProjectBoards)
+    .innerJoin(boards, and(eq(boards.id, crazyProjectBoards.boardId), isNull(boards.deletedAt)))
+    .orderBy(asc(boards.name))
+
   return projects.map((project) => ({
     id: project.id,
     slug: project.slug,
@@ -68,6 +83,9 @@ export async function listHubProjects(): Promise<HubProject[]> {
     short: project.short,
     description: project.description,
     sections: project.sections,
+    boards: boardRows
+      .filter((b) => b.projectId === project.id)
+      .map((b) => ({ id: b.id as string, slug: b.slug, name: b.name })),
     dimensions: dimensions
       .filter((d) => d.projectId === project.id)
       .map((d) => ({

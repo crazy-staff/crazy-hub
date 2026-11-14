@@ -33,9 +33,7 @@ describe.skipIf(!fixture.available)('my flow', () => {
   afterAll(fixture.close)
 
   it('moves rows', async () => {
-    await testDb.insert(posts).values({
-      /* seed inside the transaction */
-    })
+    await testDb.insert(posts).values({/* seed inside the transaction */})
     await realDomainFunction() // runs inside the same transaction via the mock
   })
 })
