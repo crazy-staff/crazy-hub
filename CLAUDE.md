@@ -45,6 +45,9 @@ accounts and tester ranks for the **Crazy Gothic Trainer**. Built on **Quackback
   `when` in the journal + 1 (upstream steps by 100000, so its later migrations still sort after ours). Check with
   `bun run --cwd packages/db db:check-drift`; after adding one, update the `CONTRACT.md` and
   `MATRIX.md` snapshots (`bunx vitest run apps/web/src/lib/server/policy -u`).
+  Two upstream tests list migrations and principal references: add a new migration's tag to
+  `fleet/__tests__/migrator-gate.test.ts`, and a new column referencing `principal` to `REPOINT_STEPS`
+  or `REPOINT_EXEMPTIONS` in `domains/principals/principal-repoint.ts` (marked `crazy-hub`).
 - Use **bun 1.4.0** (the `packageManager` pin): newer bun installs duplicate `drizzle-orm` copies and the
   typecheck fails with thousands of false errors. `bun run --cwd apps/web typecheck:app` checks the new app
   and everything it imports; the full `typecheck` covers the old UI and no longer applies.
