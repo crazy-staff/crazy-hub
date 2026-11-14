@@ -1,8 +1,8 @@
 import { Page } from './page'
 import { ComingSoon } from './coming-soon'
-import { SECTION_META, type SectionId } from '../lib/products'
+import { SECTION_META, type SectionId } from '../lib/projects'
 
-/** A product section that is still a placeholder: its title, description and the issue that builds it. */
+/** A project section that is still a placeholder: its title, description and the issue that builds it. */
 export function SectionPage({ section }: { section: SectionId }) {
   const meta = SECTION_META[section]
   return (

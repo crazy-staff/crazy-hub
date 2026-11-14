@@ -1083,12 +1083,33 @@ Key scopes are enforced: an API key holds exactly its stored scopes (owner permi
 
 ## 4. Entry points without a requireAuth/key gate
 
-228 of 1099 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
+249 of 1120 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
 Each is expected to be intentionally public, a pre-auth flow, a signature-verified webhook, or a handler that delegates auth (e.g. the MCP route).
 **Adding a row here is an access-control change** — confirm the new entry point is meant to be reachable without a gate.
 
 | Entry point | Kind |
 | --- | --- |
+| `lib/server/crazy/admin-functions.ts`::claimOwnerFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::createProjectFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::deleteCategoryFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::deleteDimensionFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::deleteDimensionValueFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::deleteRoleFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::grantRoleFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::listProjectsAdminFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::listRolesAdminFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::moveDimensionFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::moveDimensionValueFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::moveProjectFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::revokeRoleFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::saveCategoryFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::saveDimensionFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::saveDimensionValueFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::saveRoleFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::searchPeopleFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::setProjectBoardsFn | server-fn |
+| `lib/server/crazy/admin-functions.ts`::updateProjectFn | server-fn |
+| `lib/server/crazy/functions.ts`::getHubContextFn | server-fn |
 | `lib/server/functions/admin.ts`::checkOnboardingState | server-fn |
 | `lib/server/functions/admin.ts`::fetchIntegrationCatalog | server-fn |
 | `lib/server/functions/admin.ts`::getPublicAuthConfig | server-fn |

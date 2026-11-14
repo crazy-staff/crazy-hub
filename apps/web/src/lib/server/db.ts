@@ -526,6 +526,22 @@ export {
   notTestPrincipal,
   notTestConversation,
   notTestTicket,
+  // crazy-hub: our own tables (decision 13, packages/db/src/schema/crazy-hub.ts)
+  crazyProjects,
+  crazyProjectBoards,
+  crazyChangelogProjects,
+  crazyDimensions,
+  crazyDimensionValues,
+  crazyRoleCategories,
+  crazyRoles,
+  crazyRoleAssignments,
+  crazyDiscordMfa,
+  CRAZY_SECTIONS,
+  CRAZY_VALUE_STATUSES,
+  CRAZY_ROLE_SCOPES,
+  type CrazySection,
+  type CrazyValueStatus,
+  type CrazyRoleScope,
 } from '@quackback/db'
 
 // Re-export schema types not covered by @quackback/db/types

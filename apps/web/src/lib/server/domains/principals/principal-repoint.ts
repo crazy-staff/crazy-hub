@@ -462,6 +462,12 @@ export const REPOINT_STEPS: RepointStep[] = [
  * merge source.
  */
 export const REPOINT_EXEMPTIONS: Record<string, string> = {
+  // crazy-hub (decision 13): roles are given only to accounts with Discord and 2FA linked, never to
+  // an anonymous visitor, so an anonymous source principal holds no assignments to move.
+  'crazy_role_assignments.principal_id':
+    'crazy-hub roles are only given to signed-up accounts with Discord and 2FA; an anonymous source principal never holds one.',
+  'crazy_role_assignments.granted_by':
+    'crazy-hub audit field: only role givers (signed-up accounts with a role) appear here, never an anonymous principal; ON DELETE SET NULL.',
   'workspace_assistant_threads.owner_principal_id':
     'Private Copilot threads belong to authenticated team users with copilot.use; anonymous visitor merges cannot own them.',
   'integration_sync_actions.principal_id':
