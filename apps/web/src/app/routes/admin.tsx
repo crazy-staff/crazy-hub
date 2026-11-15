@@ -28,7 +28,7 @@ async function loadAdminGuard(callbackUrl: string): Promise<AdminGuard> {
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => adminGuard.get(() => loadAdminGuard(location.href)),
   component: () => (
-    <AppShell>
+    <AppShell variant="admin">
       <Outlet />
     </AppShell>
   ),

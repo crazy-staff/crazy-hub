@@ -5,15 +5,23 @@
  * scrolls on its own, with a progressive blur at the bottom while there is more to see and at the top
  * once scrolled.
  *
- * Sidebar order: the hub's name, the rows common to the whole hub, the project picker, the picked
- * project's sections (decision 13). Links like terms, contact and GitHub go at the bottom later.
+ * Portal sidebar: the project switcher in the title row, then Home and the picked project's sections in
+ * one group (decision 13), and the hub's name and version sticky at the bottom (links like terms,
+ * contact and GitHub join it later). The admin has its own sidebar.
  *
  * Until `@crazy-staff/ui` 0.2.1 (crazy-staff/crazy-ui#3) the header row, the collapse button and the
  * row/group spacing are set here to the docs sidebar's values; afterwards the library's own parts match.
  */
 import { ProgressiveBlur, Sidebar, cn, useSidebar } from '@crazy-staff/ui'
 import { Link, useLocation } from '@tanstack/react-router'
-import { PanelLeft } from 'lucide-react'
+import {
+  ArrowLeft,
+  FolderKanban,
+  LayoutDashboard,
+  PanelLeft,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { m } from '../paraglide/messages.js'
 import { COMMON, navItemOf, sectionPath } from '../lib/nav'
@@ -23,11 +31,19 @@ import { AuthDialog } from './auth/auth-dialog'
 import { LanguageMenu } from './language-menu'
 import { ProjectPicker } from './project-picker'
 import { ThemeToggle } from './theme-toggle'
+import { HUB_VERSION } from '../lib/version'
 
-export function AppShell({ children }: { children: ReactNode }) {
+/** `admin` swaps the portal sidebar for the admin's own. */
+export function AppShell({
+  children,
+  variant = 'portal',
+}: {
+  children: ReactNode
+  variant?: 'portal' | 'admin'
+}) {
   return (
     <Sidebar.Provider className="h-svh min-h-0 overflow-hidden" width="17rem">
-      <AppSidebar />
+      {variant === 'admin' ? <AdminSidebar /> : <AppSidebar />}
       <Sidebar.Inset className="@container isolate min-h-0 overflow-hidden">
         {/* the accent glow, top left of every page */}
         <div
@@ -66,21 +82,51 @@ function CollapseButton({ className }: { className?: string }) {
   )
 }
 
-/** The name of the whole hub, not of one project. */
-function Brand() {
+/** One nav row: a router link with its icon, active by the nav position. */
+function Row({
+  to,
+  icon: Icon,
+  label,
+  active,
+}: {
+  to: string
+  icon: LucideIcon
+  label: string
+  active: boolean
+}) {
   return (
-    <Link
-      to="/"
-      className="me-auto inline-flex min-w-0 items-center gap-2.5 rounded-control-sm text-[0.9375rem] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="squircle flex size-7 shrink-0 items-center justify-center rounded-chip bg-accent text-xs font-bold text-accent-foreground">
-        C
-      </span>
-      <span className="truncate">crazy-hub</span>
-    </Link>
+    <Sidebar.Item render={<Link to={to} />} icon={<Icon />} active={active}>
+      {label}
+    </Sidebar.Item>
   )
 }
 
+/** The docs sidebar's title row (56px); it keeps its own hover, the gliding block is for the rows. */
+function TitleRow({ children }: { children: ReactNode }) {
+  return (
+    <div data-no-glide-area="" className="my-2 flex h-14 shrink-0 items-center gap-2 ps-4 pe-3">
+      {children}
+      <CollapseButton />
+    </div>
+  )
+}
+
+/** Sticky at the bottom: the hub's name and version (Quackback's version on hover). */
+function HubFooter() {
+  return (
+    <Sidebar.Footer
+      data-no-glide-area=""
+      className="flex flex-row items-center justify-start gap-2 border-t border-border px-4 py-3 text-xs text-muted"
+    >
+      <span className="font-semibold text-foreground">crazy-hub</span>
+      <span title={`Quackback ${__APP_VERSION__}`} className="tabular-nums">
+        v{HUB_VERSION}
+      </span>
+    </Sidebar.Footer>
+  )
+}
+
+/** The portal: the project switcher on top, then Home and the project's sections in one group. */
 function AppSidebar() {
   const pathname = useLocation({ select: (l) => l.pathname })
   const projects = useProjects()
@@ -90,49 +136,98 @@ function AppSidebar() {
   const project = here.project ?? projects[0]
   return (
     <Sidebar label={m.nav_label()}>
-      {/* the docs sidebar's title row; it keeps its own hover, the gliding block is for the rows */}
-      <div data-no-glide-area="" className="my-2 flex h-14 shrink-0 items-center gap-2 ps-4 pe-3">
-        <Brand />
-        <CollapseButton />
-      </div>
+      <TitleRow>
+        {project ? (
+          <ProjectPicker projects={projects} project={project} section={here.section} />
+        ) : (
+          <span className="me-auto truncate text-[0.9375rem] font-semibold">crazy-hub</span>
+        )}
+      </TitleRow>
+      <Sidebar.Content className="gap-6 pt-4 pb-8">
+        <Sidebar.Group aria-label={project?.name ?? 'crazy-hub'} classNames={{ list: 'gap-0' }}>
+          {COMMON.map((item) => (
+            <Row
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label()}
+              active={active === item.to}
+            />
+          ))}
+          {project?.sections.map((section) => {
+            const meta = SECTION_META[section]
+            const to = sectionPath(project, section)
+            return (
+              <Row
+                key={section}
+                to={to}
+                icon={meta.icon}
+                label={meta.label()}
+                active={active === to}
+              />
+            )
+          })}
+        </Sidebar.Group>
+      </Sidebar.Content>
+      <HubFooter />
+    </Sidebar>
+  )
+}
+
+/**
+ * The admin has its own sidebar (owner's note of 2026-11-14: it will hold many options). Groups grow
+ * with each admin issue; rows for screens not built yet are left out.
+ */
+const ADMIN_GROUPS: {
+  label: () => string
+  rows: { to: string; icon: LucideIcon; label: () => string }[]
+}[] = [
+  {
+    label: m.admin_group_overview,
+    rows: [{ to: '/admin', icon: LayoutDashboard, label: m.admin_overview }],
+  },
+  {
+    label: m.admin_group_hub,
+    rows: [
+      { to: '/admin/projects', icon: FolderKanban, label: m.admin_projects },
+      { to: '/admin/roles', icon: ShieldCheck, label: m.admin_roles },
+    ],
+  },
+]
+
+function AdminSidebar() {
+  const pathname = useLocation({ select: (l) => l.pathname })
+  const isActive = (to: string) =>
+    to === '/admin' ? pathname === '/admin' || pathname === '/admin/' : pathname.startsWith(to)
+  return (
+    <Sidebar label={m.admin_nav_label()}>
+      <TitleRow>
+        <span className="me-auto flex min-w-0 items-center gap-2.5">
+          <span className="squircle flex size-7 shrink-0 items-center justify-center rounded-chip bg-accent text-accent-foreground [&_svg]:size-3.5">
+            <ShieldCheck />
+          </span>
+          <span className="truncate text-[0.9375rem] font-semibold">{m.nav_admin()}</span>
+        </span>
+      </TitleRow>
       <Sidebar.Content className="gap-6 pt-4 pb-8">
         <Sidebar.Group aria-label="crazy-hub" classNames={{ list: 'gap-0' }}>
-          {COMMON.map((item) => (
-            <Sidebar.Item
-              key={item.to}
-              render={<Link to={item.to} />}
-              icon={<item.icon />}
-              active={active === item.to}
-            >
-              {item.label()}
-            </Sidebar.Item>
-          ))}
+          <Row to="/" icon={ArrowLeft} label={m.admin_back_to_hub()} active={false} />
         </Sidebar.Group>
-        {project && (
-          <div className="flex flex-col gap-3">
-            <ProjectPicker projects={projects} project={project} section={here.section} />
-            {/* no group label: the picker above already names the project */}
-            <Sidebar.Group aria-label={project.name} classNames={{ list: 'gap-0' }}>
-              {project.sections.map((section) => {
-                const meta = SECTION_META[section]
-                const to = sectionPath(project, section)
-                return (
-                  <Sidebar.Item
-                    key={section}
-                    render={
-                      <Link to="/$project/$section" params={{ project: project.slug, section }} />
-                    }
-                    icon={<meta.icon />}
-                    active={active === to}
-                  >
-                    {meta.label()}
-                  </Sidebar.Item>
-                )
-              })}
-            </Sidebar.Group>
-          </div>
-        )}
+        {ADMIN_GROUPS.map((group) => (
+          <Sidebar.Group key={group.label()} label={group.label()} classNames={{ list: 'gap-0' }}>
+            {group.rows.map((row) => (
+              <Row
+                key={row.to}
+                to={row.to}
+                icon={row.icon}
+                label={row.label()}
+                active={isActive(row.to)}
+              />
+            ))}
+          </Sidebar.Group>
+        ))}
       </Sidebar.Content>
+      <HubFooter />
     </Sidebar>
   )
 }

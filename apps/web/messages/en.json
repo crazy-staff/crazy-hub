@@ -236,5 +236,10 @@
   "perm_docs_publish": "Publish docs pages",
   "perm_downloads_manage": "Manage releases on the downloads page",
   "perm_downloads_alpha": "Download alpha builds",
-  "roles_person_change": "Pick someone else"
+  "roles_person_change": "Pick someone else",
+  "admin_group_overview": "Overview",
+  "admin_overview": "Overview",
+  "admin_group_hub": "Hub",
+  "admin_nav_label": "Admin navigation",
+  "admin_back_to_hub": "Back to the hub"
 }
