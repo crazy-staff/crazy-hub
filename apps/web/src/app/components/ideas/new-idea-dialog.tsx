@@ -1,15 +1,21 @@
 /**
- * Post an idea (#5): board (when the project has several), title with similar ideas while typing, and
- * the description. On success the new idea opens.
+ * Post an idea (#5): board (when the project has several), title with similar ideas while typing, the
+ * description with formatting and images, and tags (category, game … from the public tags). On
+ * success the new idea opens.
  */
-import { Field, Input, Select, Textarea } from '@crazy-staff/ui'
+import { Field, Input, Select } from '@crazy-staff/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { portalQueries } from '@/lib/client/queries/portal'
 import { useSimilarPosts } from '@/lib/client/hooks/use-similar-posts'
+import { markdownToContentFn, setIdeaTagsFn } from '@/lib/server/crazy/ideas-functions'
 import { m } from '../../paraglide/messages.js'
-import { FormDialog, text } from '../form-dialog'
+import { FormDialog } from '../form-dialog'
 import type { HubProject } from '../../lib/projects'
 import { useCreateIdea } from '../../lib/idea-mutations'
+import { MarkdownEditor } from './markdown-editor'
+import { TagPicker } from './tag-picker'
 
 export function NewIdeaDialog({
   project,
@@ -23,8 +29,11 @@ export function NewIdeaDialog({
 }) {
   const navigate = useNavigate()
   const create = useCreateIdea()
+  const tags = useQuery(portalQueries.tags()).data ?? []
   const [board, setBoard] = useState<string | null>(boardId ?? project.boards[0]?.id ?? null)
   const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [tagIds, setTagIds] = useState<string[]>([])
   const similar = useSimilarPosts({ title })
   const boardSlugs = new Set(project.boards.map((b) => b.slug))
   const matches = (similar.posts ?? []).filter((p) => boardSlugs.has(p.boardSlug))
@@ -32,18 +41,25 @@ export function NewIdeaDialog({
   return (
     <FormDialog
       open
+      size="lg"
       onOpenChange={(open) => {
         if (!open) onClose()
       }}
       title={m.ideas_new()}
       submitLabel={m.ideas_post()}
-      onSubmit={async (form) => {
-        if (!board) throw new Error('missing')
+      onSubmit={async () => {
+        if (!board || !title.trim()) throw new Error('missing')
+        const markdown = body.trim()
+        const contentJson = markdown ? await markdownToContentFn({ data: { markdown } }) : undefined
         const created = await create.mutateAsync({
           boardId: board,
-          title: text(form, 'title'),
-          content: text(form, 'content'),
+          title: title.trim(),
+          content: markdown,
+          contentJson,
         })
+        if (tagIds.length) {
+          await setIdeaTagsFn({ data: { postId: created.id, tagIds } }).catch(() => {})
+        }
         void navigate({
           to: '/$project/ideas/$postId',
           params: { project: project.slug, postId: created.id },
@@ -88,9 +104,17 @@ export function NewIdeaDialog({
           ))}
         </div>
       )}
-      <Field label={m.ideas_description()}>
-        <Textarea name="content" aria-label={m.ideas_description()} rows={6} maxLength={10000} />
-      </Field>
+      <MarkdownEditor
+        label={m.ideas_description()}
+        placeholder={m.ideas_description_placeholder()}
+        value={body}
+        onChange={setBody}
+      />
+      {tags.length > 0 && (
+        <Field label={m.ideas_tags()}>
+          <TagPicker tags={tags} value={tagIds} onChange={setTagIds} />
+        </Field>
+      )}
     </FormDialog>
   )
 }

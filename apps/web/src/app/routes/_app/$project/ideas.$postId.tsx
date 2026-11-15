@@ -1,23 +1,77 @@
-import { Alert, Avatar, Button, Card, Chip, Textarea, toast } from '@crazy-staff/ui'
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Lock } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
-import type { PostId } from '@quackback/ids'
+import {
+  Alert,
+  AlertDialog,
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  DropdownMenu,
+  Field,
+  Input,
+  Select,
+  toast,
+} from '@crazy-staff/ui'
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
+import {
+  ArrowLeft,
+  EyeOff,
+  Lock,
+  LockOpen,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  Reply,
+  RotateCcw,
+  Tags,
+  Trash2,
+} from 'lucide-react'
+import { useState } from 'react'
+import type { PostCommentId, PostId } from '@quackback/ids'
 import { portalDetailQueries, type PublicCommentView } from '@/lib/client/queries/portal-detail'
 import { portalQueries } from '@/lib/client/queries/portal'
-import { useCreateComment } from '@/lib/client/mutations/portal-comments'
-import { useSessionContext } from '@/lib/client/hooks/use-root-context'
+import { publicPostsKeys } from '@/lib/client/hooks/use-portal-posts-query'
+import {
+  createCommentFn,
+  userDeleteCommentFn,
+  userEditCommentFn,
+} from '@/lib/server/functions/comments'
+import { userDeletePostFn, userEditPostFn } from '@/lib/server/functions/public-posts'
+import {
+  deleteIdeaFn,
+  getIdeaPermissionsFn,
+  lockCommentsFn,
+  markdownToContentFn,
+  pinCommentFn,
+  removeCommentFn,
+  restoreCommentFn,
+  setIdeaStatusFn,
+  setIdeaTagsFn,
+} from '@/lib/server/crazy/ideas-functions'
 import { m } from '../../../paraglide/messages.js'
 import { PageFrame } from '../../../components/page'
+import { FormDialog } from '../../../components/form-dialog'
 import { VoteButton } from '../../../components/ideas/vote-button'
 import { StatusChip } from '../../../components/ideas/status-chip'
+import { RichText } from '../../../components/ideas/rich-text'
+import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
+import { TagPicker } from '../../../components/ideas/tag-picker'
 import { openSignIn } from '../../../components/auth/auth-dialog'
+import { errorMessage } from '../../../lib/admin'
 
 /**
- * One idea (#5): vote, title, status, tags, author, the text, the team's official response, a notice
- * when it was merged into another idea, and the comments. Only ideas of the project's boards open
- * here; another project's idea is a 404.
+ * One idea (#5): vote, title, status, tags, author, the formatted text, the official response, a
+ * notice when it was merged, and the comments with replies. Authors edit and delete their own idea and
+ * comments; people with the project's moderation permissions (decision 13) get a moderation bar
+ * (status, tags, lock comments, delete) and remove, restore and pin comments. Only ideas of the
+ * project's boards open here; another project's idea is a 404.
  */
 export const Route = createFileRoute('/_app/$project/ideas/$postId')({
   loader: async ({ context, params }) => {
@@ -37,23 +91,87 @@ export const Route = createFileRoute('/_app/$project/ideas/$postId')({
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const formatDate = (value: Date | string) => dateFormat.format(new Date(value))
 
+/** Runs a change, refreshes the idea and the lists; failures show as a toast. */
+function useAct(postId: string) {
+  const queryClient = useQueryClient()
+  return async (run: () => Promise<unknown>, success?: string) => {
+    try {
+      await run()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portal', 'post', postId] }),
+        queryClient.invalidateQueries({ queryKey: publicPostsKeys.lists() }),
+      ])
+      if (success) toast.success(success)
+      return true
+    } catch (err) {
+      toast.error(errorMessage(err))
+      return false
+    }
+  }
+}
+
+function useMe() {
+  const me = useRouteContext({ from: '__root__', select: (c) => c.hub.me })
+  return me
+}
+
 function Idea() {
   const { project } = Route.useRouteContext()
   const { postId } = Route.useParams()
+  const navigate = useNavigate()
   const { data: post } = useSuspenseQuery(portalDetailQueries.postDetail(postId as PostId))
   const statuses = useQuery(portalQueries.statuses()).data ?? []
+  const can = useQuery({
+    queryKey: ['crazy', 'idea-permissions', postId],
+    queryFn: () => getIdeaPermissionsFn({ data: { postId } }),
+  }).data
+  const me = useMe()
+  const act = useAct(postId)
+  const [editing, setEditing] = useState(false)
   const status = statuses.find((s) => s.id === post.statusId)
+  const mine = !!me && post.principalId === me.principalId
+  const moderates = !!can && (can.status || can.tags || can.delete || can.comments)
+
+  const removeIdea = async (asModerator: boolean) => {
+    const ok = await act(() =>
+      asModerator
+        ? deleteIdeaFn({ data: { postId } })
+        : userDeletePostFn({ data: { postId: postId as PostId } })
+    )
+    if (ok) void navigate({ to: '/$project/ideas', params: { project: project.slug } })
+  }
 
   return (
     <PageFrame>
       <article className="flex flex-col gap-6">
-        <Link
-          to="/$project/ideas"
-          params={{ project: project.slug }}
-          className="inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> {m.ideas_back()}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/$project/ideas"
+            params={{ project: project.slug }}
+            className="me-auto inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" /> {m.ideas_back()}
+          </Link>
+          {mine && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                <Pencil /> {m.admin_edit()}
+              </Button>
+              <AlertDialog
+                trigger={
+                  <Button variant="ghost" size="sm">
+                    <Trash2 /> {m.admin_delete()}
+                  </Button>
+                }
+                title={m.ideas_delete_confirm()}
+                cancelLabel={m.admin_cancel()}
+                actionLabel={m.admin_delete()}
+                tone="danger"
+                onAction={() => void removeIdea(false)}
+              />
+            </>
+          )}
+        </div>
 
         {post.mergeInfo && (
           <Alert title={m.ideas_merged()}>
@@ -67,6 +185,56 @@ function Idea() {
           </Alert>
         )}
 
+        {moderates && can && (
+          <Card.Root className="flex flex-wrap items-center gap-2 border-dashed px-3 py-2">
+            <span className="me-1 text-xs font-medium text-muted">{m.ideas_moderation()}</span>
+            {can.status && (
+              <Select
+                size="sm"
+                aria-label={m.ideas_status()}
+                value={post.statusId}
+                onValueChange={(next) =>
+                  next &&
+                  void act(
+                    () => setIdeaStatusFn({ data: { postId, statusId: next } }),
+                    m.settings_saved()
+                  )
+                }
+                items={statuses.map((s) => ({ value: s.id, label: s.name }))}
+              />
+            )}
+            {can.tags && (
+              <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} moderator />
+            )}
+            {can.comments && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  act(() => lockCommentsFn({ data: { postId, locked: !post.isCommentsLocked } }))
+                }
+              >
+                {post.isCommentsLocked ? <LockOpen /> : <Lock />}
+                {post.isCommentsLocked ? m.ideas_unlock_comments() : m.ideas_lock_comments()}
+              </Button>
+            )}
+            {can.delete && (
+              <AlertDialog
+                trigger={
+                  <Button variant="outline" size="sm" className="ms-auto text-danger">
+                    <Trash2 /> {m.ideas_delete()}
+                  </Button>
+                }
+                title={m.ideas_delete_confirm()}
+                cancelLabel={m.admin_cancel()}
+                actionLabel={m.admin_delete()}
+                tone="danger"
+                onAction={() => void removeIdea(true)}
+              />
+            )}
+          </Card.Root>
+        )}
+
         <header className="flex items-start gap-4">
           <VoteButton postId={post.id} voteCount={post.voteCount} size="lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -78,6 +246,9 @@ function Idea() {
                   {tag.name}
                 </Chip>
               ))}
+              {mine && !can?.tags && (
+                <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} />
+              )}
               {project.boards.length > 1 && (
                 <Chip size="sm" variant="outline">
                   {post.board.name}
@@ -98,11 +269,29 @@ function Idea() {
           </div>
         </header>
 
-        {post.content && <p className="text-base whitespace-pre-wrap">{post.content}</p>}
+        <RichText json={post.contentJson} text={post.content} />
 
         {post.pinnedComment && (
-          <Card title={m.ideas_official_response()} className="border-accent/40 bg-accent-soft/30">
-            <p className="whitespace-pre-wrap">{post.pinnedComment.content}</p>
+          <Card
+            title={m.ideas_official_response()}
+            className="border-accent/40 bg-accent-soft/30"
+            footer={
+              can?.comments ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
+                >
+                  <PinOff /> {m.ideas_unpin()}
+                </Button>
+              ) : undefined
+            }
+          >
+            <RichText
+              size="sm"
+              json={(post.pinnedComment as { contentJson?: unknown }).contentJson}
+              text={post.pinnedComment.content}
+            />
             <p className="mt-3 text-xs text-muted">
               {post.pinnedComment.authorName ?? '—'} · {formatDate(post.pinnedComment.createdAt)}
             </p>
@@ -115,9 +304,111 @@ function Idea() {
           canComment={!!post.canComment}
           locked={!!post.isCommentsLocked}
           pinnedId={post.pinnedCommentId}
+          moderator={!!can?.comments}
         />
       </article>
+      {editing && (
+        <EditIdeaDialog
+          postId={postId}
+          title={post.title}
+          content={post.content}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </PageFrame>
+  )
+}
+
+function EditIdeaDialog({
+  postId,
+  title: initialTitle,
+  content,
+  onClose,
+}: {
+  postId: string
+  title: string
+  content: string
+  onClose: () => void
+}) {
+  const act = useAct(postId)
+  const [title, setTitle] = useState(initialTitle)
+  const [body, setBody] = useState(content)
+  return (
+    <FormDialog
+      open
+      size="lg"
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title={m.ideas_edit()}
+      onSubmit={async () => {
+        const markdown = body.trim()
+        const contentJson = markdown ? await markdownToContentFn({ data: { markdown } }) : undefined
+        // the dialog shows the error itself, so the change runs outside `act`
+        await userEditPostFn({
+          data: {
+            postId: postId as PostId,
+            title: title.trim(),
+            content: markdown,
+            contentJson: contentJson as never,
+          },
+        })
+        await act(async () => {})
+      }}
+    >
+      <Field label={m.ideas_title()} required>
+        <Input
+          required
+          maxLength={200}
+          value={title}
+          onChange={(e) => setTitle(e.currentTarget.value)}
+        />
+      </Field>
+      <MarkdownEditor label={m.ideas_description()} value={body} onChange={setBody} />
+    </FormDialog>
+  )
+}
+
+/** Tags of an idea: any tag for a moderator, the public tags for the author. */
+function TagsDialog({
+  postId,
+  current,
+  moderator,
+}: {
+  postId: string
+  current: string[]
+  moderator?: boolean
+}) {
+  const act = useAct(postId)
+  const tags = useQuery(portalQueries.tags()).data ?? []
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState(current)
+  return (
+    <>
+      <Button
+        variant={moderator ? 'outline' : 'ghost'}
+        size="sm"
+        onClick={() => {
+          setValue(current)
+          setOpen(true)
+        }}
+      >
+        <Tags /> {m.ideas_edit_tags()}
+      </Button>
+      {open && (
+        <FormDialog
+          open
+          onOpenChange={setOpen}
+          title={m.ideas_edit_tags()}
+          onSubmit={async () => {
+            await setIdeaTagsFn({ data: { postId, tagIds: value } })
+            await act(async () => {})
+          }}
+        >
+          <TagPicker tags={tags} value={value} onChange={setValue} />
+        </FormDialog>
+      )}
+    </>
   )
 }
 
@@ -127,34 +418,18 @@ function Comments({
   canComment,
   locked,
   pinnedId,
+  moderator,
 }: {
   postId: string
   comments: PublicCommentView[]
   canComment: boolean
   locked: boolean
   pinnedId: string | null
+  moderator: boolean
 }) {
-  const session = useSessionContext()
+  const me = useMe()
   const navigate = useNavigate()
-  const user = session?.user && session.user.principalType !== 'anonymous' ? session.user : null
-  const create = useCreateComment({
-    postId: postId as PostId,
-    author: user ? { name: user.name, email: user.email ?? '' } : undefined,
-  })
-  const [draft, setDraft] = useState('')
   const visible = comments.filter((c) => c.id !== pinnedId)
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    const content = draft.trim()
-    if (!content) return
-    try {
-      await create.mutateAsync({ postId, content })
-      setDraft('')
-    } catch {
-      toast.error(m.auth_error_generic())
-    }
-  }
 
   return (
     <section className="flex flex-col gap-4">
@@ -163,7 +438,7 @@ function Comments({
         <p className="flex items-center gap-2 text-sm text-muted">
           <Lock className="size-4" /> {m.ideas_comments_locked()}
         </p>
-      ) : !user ? (
+      ) : !me ? (
         <Button
           variant="outline"
           className="w-fit"
@@ -172,26 +447,21 @@ function Comments({
           {m.ideas_sign_in_to_comment()}
         </Button>
       ) : canComment ? (
-        <form onSubmit={submit} className="flex flex-col gap-2">
-          <Textarea
-            aria-label={m.ideas_comment()}
-            placeholder={m.ideas_comment_placeholder()}
-            rows={3}
-            maxLength={5000}
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-          />
-          <Button type="submit" className="w-fit" disabled={!draft.trim() || create.isPending}>
-            {m.ideas_comment()}
-          </Button>
-        </form>
+        <CommentComposer postId={postId} />
       ) : null}
       {visible.length === 0 ? (
         <p className="text-sm text-muted">{m.ideas_no_comments()}</p>
       ) : (
-        <ol className="flex flex-col gap-4">
+        <ol className="flex flex-col gap-5">
           {visible.map((comment) => (
-            <CommentItem key={comment.id} comment={comment} />
+            <CommentItem
+              key={comment.id}
+              postId={postId}
+              comment={comment}
+              canReply={canComment && !locked && !!me}
+              moderator={moderator}
+              root
+            />
           ))}
         </ol>
       )}
@@ -199,8 +469,87 @@ function Comments({
   )
 }
 
-function CommentItem({ comment }: { comment: PublicCommentView }) {
-  const removed = !!comment.deletedAt || comment.isRemovedByTeam
+function CommentComposer({
+  postId,
+  parentId,
+  onDone,
+  autoFocus,
+}: {
+  postId: string
+  parentId?: string
+  onDone?: () => void
+  autoFocus?: boolean
+}) {
+  const act = useAct(postId)
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    const markdown = draft.trim()
+    if (!markdown) return
+    setBusy(true)
+    const ok = await act(async () => {
+      const contentJson = await markdownToContentFn({ data: { markdown } })
+      await createCommentFn({
+        data: {
+          postId: postId as PostId,
+          content: markdown,
+          contentJson: contentJson as never,
+          parentId: parentId as PostCommentId | undefined,
+        },
+      })
+    })
+    setBusy(false)
+    if (ok) {
+      setDraft('')
+      onDone?.()
+    }
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <MarkdownEditor
+        label={m.ideas_comment()}
+        placeholder={m.ideas_comment_placeholder()}
+        rows={parentId ? 2 : 3}
+        maxLength={5000}
+        value={draft}
+        onChange={setDraft}
+        autoFocus={autoFocus}
+      />
+      <div className="flex gap-2">
+        <Button size="sm" disabled={!draft.trim() || busy} onClick={submit}>
+          {parentId ? m.ideas_reply() : m.ideas_comment()}
+        </Button>
+        {onDone && (
+          <Button size="sm" variant="ghost" onClick={onDone}>
+            {m.admin_cancel()}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CommentItem({
+  postId,
+  comment,
+  canReply,
+  moderator,
+  root,
+}: {
+  postId: string
+  comment: PublicCommentView
+  canReply: boolean
+  moderator: boolean
+  root?: boolean
+}) {
+  const me = useMe()
+  const act = useAct(postId)
+  const [replying, setReplying] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const removed = !!comment.deletedAt
+  const mine = !!me && comment.principalId === me.principalId
+  const json = (comment as { contentJson?: unknown }).contentJson
+
   return (
     <li className="flex gap-3">
       <Avatar
@@ -218,18 +567,152 @@ function CommentItem({ comment }: { comment: PublicCommentView }) {
             </Chip>
           )}
           <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
+          {(mine || moderator) && (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger
+                render={<Button variant="ghost" size="icon-sm" className="ms-auto" />}
+                aria-label={m.ideas_comment_actions()}
+              >
+                <MoreHorizontal />
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end">
+                {mine && !removed && (
+                  <DropdownMenu.Item onClick={() => setEditing(true)}>
+                    <Pencil /> {m.admin_edit()}
+                  </DropdownMenu.Item>
+                )}
+                {mine && !removed && (
+                  <DropdownMenu.Item
+                    onClick={() =>
+                      act(() => userDeleteCommentFn({ data: { commentId: comment.id } }))
+                    }
+                  >
+                    <Trash2 /> {m.admin_delete()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && root && !removed && (
+                  <DropdownMenu.Item
+                    onClick={() =>
+                      act(() => pinCommentFn({ data: { postId, commentId: comment.id } }))
+                    }
+                  >
+                    <Pin /> {m.ideas_pin()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && !mine && !removed && (
+                  <DropdownMenu.Item
+                    danger
+                    onClick={() => act(() => removeCommentFn({ data: { commentId: comment.id } }))}
+                  >
+                    <EyeOff /> {m.ideas_remove_comment()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && removed && (
+                  <DropdownMenu.Item
+                    onClick={() => act(() => restoreCommentFn({ data: { commentId: comment.id } }))}
+                  >
+                    <RotateCcw /> {m.ideas_restore_comment()}
+                  </DropdownMenu.Item>
+                )}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          )}
         </div>
-        <p className={removed ? 'text-sm text-muted italic' : 'text-sm whitespace-pre-wrap'}>
-          {removed ? m.ideas_comment_removed() : comment.content}
-        </p>
+        {editing ? (
+          <EditComment
+            postId={postId}
+            commentId={comment.id}
+            content={comment.content}
+            onDone={() => setEditing(false)}
+          />
+        ) : removed ? (
+          <p className="text-sm text-muted italic">{m.ideas_comment_removed()}</p>
+        ) : (
+          <RichText size="sm" json={json} text={comment.content} />
+        )}
+        {canReply && !removed && !editing && (
+          <button
+            type="button"
+            className="inline-flex w-fit items-center gap-1 text-xs text-muted hover:text-foreground"
+            onClick={() => setReplying((v) => !v)}
+          >
+            <Reply className="size-3.5" /> {m.ideas_reply()}
+          </button>
+        )}
+        {replying && (
+          <CommentComposer
+            postId={postId}
+            parentId={comment.id}
+            autoFocus
+            onDone={() => setReplying(false)}
+          />
+        )}
         {comment.replies?.length > 0 && (
           <ol className="mt-3 flex flex-col gap-4 border-s border-border ps-4">
             {comment.replies.map((reply) => (
-              <CommentItem key={reply.id} comment={reply as PublicCommentView} />
+              <CommentItem
+                key={reply.id}
+                postId={postId}
+                comment={reply as PublicCommentView}
+                canReply={canReply}
+                moderator={moderator}
+              />
             ))}
           </ol>
         )}
       </div>
     </li>
+  )
+}
+
+function EditComment({
+  postId,
+  commentId,
+  content,
+  onDone,
+}: {
+  postId: string
+  commentId: string
+  content: string
+  onDone: () => void
+}) {
+  const act = useAct(postId)
+  const [draft, setDraft] = useState(content)
+  return (
+    <div className="flex flex-col gap-2">
+      <MarkdownEditor
+        label={m.admin_edit()}
+        rows={3}
+        maxLength={5000}
+        value={draft}
+        onChange={setDraft}
+        autoFocus
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          disabled={!draft.trim()}
+          onClick={async () => {
+            const markdown = draft.trim()
+            const ok = await act(async () => {
+              const contentJson = await markdownToContentFn({ data: { markdown } })
+              await userEditCommentFn({
+                data: {
+                  commentId: commentId as PostCommentId,
+                  content: markdown,
+                  contentJson: contentJson as never,
+                },
+              })
+            })
+            if (ok) onDone()
+          }}
+        >
+          {m.settings_save()}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onDone}>
+          {m.admin_cancel()}
+        </Button>
+      </div>
+    </div>
   )
 }

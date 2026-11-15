@@ -12,6 +12,7 @@ export function FormDialog({
   onOpenChange,
   title,
   submitLabel,
+  size = 'md',
   onSubmit,
   children,
 }: {
@@ -19,6 +20,7 @@ export function FormDialog({
   onOpenChange: (open: boolean) => void
   title: string
   submitLabel?: string
+  size?: 'sm' | 'md' | 'lg'
   onSubmit: (data: FormData) => Promise<void>
   children: ReactNode
 }) {
@@ -45,7 +47,7 @@ export function FormDialog({
         onOpenChange(next)
       }}
     >
-      <Dialog.Content size="md">
+      <Dialog.Content size={size}>
         <form onSubmit={submit} className="contents">
           <Dialog.Header>
             <Dialog.Title>{title}</Dialog.Title>

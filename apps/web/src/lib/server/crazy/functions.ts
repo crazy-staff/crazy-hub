@@ -20,6 +20,8 @@ export interface HubRole {
 export interface HubContext {
   projects: HubProject[]
   me: {
+    /** The signed-in person's principal id (to recognise their own ideas and comments). */
+    principalId: string
     discord: DiscordStatus
     roles: HubRole[]
     /** Hub-wide permissions (global roles). */
@@ -42,6 +44,7 @@ export const getHubContextFn = createServerFn({ method: 'GET' }).handler(
     return {
       projects,
       me: {
+        principalId: access.principalId,
         discord: access.discord,
         roles: access.assignments.map((a) => ({
           slug: a.role.slug,

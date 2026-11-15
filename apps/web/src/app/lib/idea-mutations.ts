@@ -77,9 +77,19 @@ export function useIdeaVote(postId: string, voteCount: number) {
 export function useCreateIdea() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { boardId: string; title: string; content: string }) =>
+    mutationFn: (input: {
+      boardId: string
+      title: string
+      content: string
+      contentJson?: unknown
+    }) =>
       createPublicPostFn({
-        data: { boardId: input.boardId as BoardId, title: input.title, content: input.content },
+        data: {
+          boardId: input.boardId as BoardId,
+          title: input.title,
+          content: input.content,
+          contentJson: input.contentJson as never,
+        },
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: publicPostsKeys.lists() }),
   })

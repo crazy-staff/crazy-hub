@@ -28,7 +28,11 @@ import {
   saveRoleFn,
   searchPeopleFn,
 } from '@/lib/server/crazy/admin-functions'
-import { CRAZY_PERMISSIONS, CRAZY_PERMISSION_KEYS } from '@/lib/shared/crazy/permissions'
+import {
+  CRAZY_PERMISSIONS,
+  EDITABLE_PERMISSION_KEYS,
+  sanitizePermissions,
+} from '@/lib/shared/crazy/permissions'
 import { m } from '../../paraglide/messages.js'
 import { Page } from '../../components/page'
 import { FormDialog, RowActions, text } from '../../components/admin/parts'
@@ -485,10 +489,12 @@ function RoleDialog({
   const queryClient = useQueryClient()
   const [categoryId, setCategoryId] = useState<string | null>(category.id)
   const [scope, setScope] = useState<'global' | 'project'>(role?.scope ?? 'project')
-  const [permissions, setPermissions] = useState<string[]>(role?.permissions ?? [])
+  const [permissions, setPermissions] = useState<string[]>(
+    role ? sanitizePermissions(role.permissions, role.scope) : []
+  )
   const [isPublic, setIsPublic] = useState(role?.isPublic ?? true)
   const [requiresDiscordMfa, setRequiresDiscordMfa] = useState(role?.requiresDiscordMfa ?? true)
-  const available = CRAZY_PERMISSION_KEYS.filter(
+  const available = EDITABLE_PERMISSION_KEYS.filter(
     (key) => scope === 'global' || CRAZY_PERMISSIONS[key].scope === 'project'
   )
   return (
