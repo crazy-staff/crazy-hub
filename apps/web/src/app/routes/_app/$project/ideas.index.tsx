@@ -100,11 +100,13 @@ function Ideas() {
         id: 'status',
         key: 'status',
         label: m.ideas_status(),
+        // by slug: Quackback's list hook takes `status_…` ids or slugs, and status ids are
+        // `post_status_…`, so an id would be read as a slug and match nothing
         options: statuses.map((s) => ({
-          id: s.id,
+          id: s.slug,
           label: s.name,
           color: s.color ?? null,
-          checked: search.status?.includes(s.id) ?? false,
+          checked: search.status?.includes(s.slug) ?? false,
         })),
       },
       ...tagGroups.map((group) => ({

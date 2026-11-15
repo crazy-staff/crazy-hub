@@ -99,6 +99,15 @@ test('post an idea and vote on it', async ({ page }) => {
   await page.getByRole('link', { name: 'All ideas' }).click()
   await page.getByRole('searchbox', { name: 'Search ideas' }).fill(title)
   await expect(page.getByRole('link', { name: new RegExp(title) })).toBeVisible()
+
+  // filter by status: the choice shows as a chip under the toolbar and can be removed there
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.getByRole('dialog').getByRole('checkbox', { name: 'Open' }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Filters (1 active)' })).toBeVisible()
+  await expect(page.getByRole('link', { name: new RegExp(title) })).toBeVisible()
+  await page.getByRole('button', { name: 'Remove filter: Status: Open' }).click()
+  await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible()
 })
 
 test('comment, reply, edit and delete; a moderator removes a comment and locks comments', async ({

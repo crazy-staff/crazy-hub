@@ -829,7 +829,7 @@ function AvatarStack({ people }: { people: PublicCommentView[] }) {
   const seen = new Map<string, PublicCommentView>()
   for (const p of people) if (!seen.has(p.principalId ?? p.id)) seen.set(p.principalId ?? p.id, p)
   return (
-    <span className="flex -space-x-1.5" aria-hidden>
+    <span className="flex -space-x-0.5" aria-hidden>
       {[...seen.values()].slice(0, 3).map((p) => (
         <Avatar
           key={p.id}
