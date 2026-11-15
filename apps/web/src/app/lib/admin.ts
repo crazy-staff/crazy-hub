@@ -50,6 +50,7 @@ const ERRORS: Record<string, () => string> = {
   'category-not-empty': m.error_category_not_empty,
   'role-is-system': m.error_role_is_system,
   'owner-exists': m.error_owner_exists,
+  'idea-has-engagement': m.error_idea_has_engagement,
 }
 
 /** The message for an error a crazy-hub server function threw (its reason code), or a generic one. */
