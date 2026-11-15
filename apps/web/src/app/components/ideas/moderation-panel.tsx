@@ -1,11 +1,23 @@
 /**
- * Moderation of one idea in the page's right column (owner's note, #45): the idea's facts, status,
- * board, tags, comments lock, the official response and deleting it. What shows depends on the
- * caller's permissions in the idea's project (decision 13): `ideas.status` (status and board),
- * `ideas.tags`, `comments.moderate` (lock, official response), `ideas.delete`.
+ * Moderation of one idea in the page's right column (owner's note, #45): the idea at a glance (votes
+ * up and down, comments, author), then status, board, tags, comments and, apart, deleting it. What
+ * shows depends on the caller's permissions in the idea's project (decision 13): `ideas.status`
+ * (status and board), `ideas.tags`, `comments.moderate` (lock, official response), `ideas.delete`.
  */
-import { AlertDialog, Button, Chip, Select, Switch } from '@crazy-staff/ui'
-import { ArrowDown, ArrowUp, MessageSquare, PinOff, Trash2 } from 'lucide-react'
+import { AlertDialog, Avatar, Button, Chip, Select, Switch, cn } from '@crazy-staff/ui'
+import {
+  ArrowDown,
+  ArrowUp,
+  CircleDot,
+  LayoutList,
+  MessageSquare,
+  MessagesSquare,
+  PinOff,
+  Tags,
+  Trash2,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react'
 import type { PublicPostDetailView } from '@/lib/client/queries/portal-detail'
 import {
   lockCommentsFn,
@@ -28,6 +40,35 @@ export interface IdeaPermissions {
   comments: boolean
 }
 
+/** One number of the idea at a glance. */
+function Stat({
+  icon: Icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: LucideIcon
+  value: number
+  label: string
+  tone?: 'accent' | 'danger'
+}) {
+  return (
+    <div className="squircle flex flex-col items-center gap-1 rounded-control bg-surface-2 px-2 py-3">
+      <span
+        className={cn(
+          'flex items-center gap-1 text-lg leading-none font-semibold tabular-nums',
+          tone === 'accent' && 'text-accent',
+          tone === 'danger' && 'text-danger'
+        )}
+      >
+        <Icon className="size-4" strokeWidth={2.5} />
+        {value}
+      </span>
+      <span className="text-[0.6875rem] text-muted">{label}</span>
+    </div>
+  )
+}
+
 export function ModerationPanelContent({
   post,
   project,
@@ -47,34 +88,32 @@ export function ModerationPanelContent({
   const act = useAct(postId)
   return (
     <>
-      <SidePanelSection label={m.ideas_facts()}>
-        <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 text-sm">
-          <dt className="text-muted">{m.ideas_votes()}</dt>
-          <dd className="flex items-center gap-3 tabular-nums">
-            <span className="inline-flex items-center gap-1">
-              <ArrowUp className="size-3.5 text-accent" /> {votes.up}
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-3 gap-2">
+          <Stat icon={ArrowUp} value={votes.up} label={m.ideas_votes_up()} tone="accent" />
+          <Stat icon={ArrowDown} value={votes.down} label={m.ideas_votes_down()} tone="danger" />
+          <Stat
+            icon={MessageSquare}
+            value={countComments(post.comments)}
+            label={m.ideas_comments()}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Avatar size="sm" src={post.authorAvatarUrl ?? undefined} name={post.authorName ?? '?'} />
+          <div className="flex min-w-0 flex-col">
+            <AuthorLink principalId={post.principalId} className="truncate text-sm font-medium">
+              {post.authorName ?? '—'}
+            </AuthorLink>
+            <span className="text-xs text-muted">
+              {m.ideas_created()} {formatDate(post.createdAt)}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <ArrowDown className="size-3.5 text-danger" /> {votes.down}
-            </span>
-          </dd>
-          <dt className="text-muted">{m.ideas_comments()}</dt>
-          <dd className="inline-flex items-center gap-1 tabular-nums">
-            <MessageSquare className="size-3.5 text-muted" /> {countComments(post.comments)}
-          </dd>
-          <dt className="text-muted">{m.ideas_author()}</dt>
-          <dd className="truncate">
-            <AuthorLink principalId={post.principalId}>{post.authorName ?? '—'}</AuthorLink>
-          </dd>
-          <dt className="text-muted">{m.ideas_created()}</dt>
-          <dd>{formatDate(post.createdAt)}</dd>
-        </dl>
-      </SidePanelSection>
+          </div>
+        </div>
+      </div>
 
       {can.status && (
-        <SidePanelSection label={m.ideas_status()}>
+        <SidePanelSection label={m.ideas_status()} icon={CircleDot}>
           <Select
-            size="sm"
             aria-label={m.ideas_status()}
             value={post.statusId}
             onValueChange={(next) =>
@@ -90,9 +129,12 @@ export function ModerationPanelContent({
       )}
 
       {can.status && project.boards.length > 1 && (
-        <SidePanelSection label={m.ideas_board()}>
+        <SidePanelSection
+          label={m.ideas_board()}
+          icon={LayoutList}
+          description={m.ideas_board_move_hint()}
+        >
           <Select
-            size="sm"
             aria-label={m.ideas_board()}
             value={post.board.id}
             onValueChange={(next) =>
@@ -106,15 +148,17 @@ export function ModerationPanelContent({
       )}
 
       {can.tags && (
-        <SidePanelSection label={m.ideas_tags()}>
-          {post.tags.length > 0 && (
+        <SidePanelSection label={m.ideas_tags()} icon={Tags}>
+          {post.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
-                <Chip key={tag.id} size="sm" variant="neutral">
+                <Chip key={tag.id} variant="neutral">
                   {tag.name}
                 </Chip>
               ))}
             </div>
+          ) : (
+            <span className="text-sm text-muted">{m.ideas_no_tags()}</span>
           )}
           <TagsDialog
             postId={postId}
@@ -126,10 +170,10 @@ export function ModerationPanelContent({
       )}
 
       {can.comments && (
-        <SidePanelSection label={m.ideas_comments()}>
+        <SidePanelSection label={m.ideas_comments()} icon={MessagesSquare}>
           <Switch
-            size="sm"
             label={m.ideas_lock_comments()}
+            description={m.ideas_lock_comments_hint()}
             checked={!!post.isCommentsLocked}
             onCheckedChange={(locked) =>
               void act(() => lockCommentsFn({ data: { postId, locked } }))
@@ -138,7 +182,6 @@ export function ModerationPanelContent({
           {post.pinnedComment && (
             <Button
               variant="outline"
-              size="sm"
               className="w-full"
               onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
             >
@@ -149,13 +192,16 @@ export function ModerationPanelContent({
       )}
 
       {can.delete && (
-        <div className="border-t border-border pt-4">
+        <SidePanelSection
+          label={m.ideas_danger_zone()}
+          icon={TriangleAlert}
+          className="[&>div>span:first-child]:text-danger"
+        >
           <AlertDialog
             trigger={
               <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-danger hover:bg-danger/10 hover:text-danger"
+                variant="outline"
+                className="w-full border-danger/40 text-danger hover:bg-danger/10 hover:text-danger"
               >
                 <Trash2 /> {m.ideas_delete()}
               </Button>
@@ -166,7 +212,7 @@ export function ModerationPanelContent({
             tone="danger"
             onAction={onDelete}
           />
-        </div>
+        </SidePanelSection>
       )}
     </>
   )

@@ -43,12 +43,16 @@ export function SidePanel({
     <section
       aria-label={title}
       className={cn(
-        'squircle flex flex-col gap-5 rounded-card border border-border bg-surface p-4',
+        // a bit wider than the column's text start: the right column has room to spare
+        'squircle -ms-8 flex w-[calc(100%+2rem)] flex-col gap-6 rounded-card border border-border bg-surface p-5',
         className
       )}
     >
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        <Icon className="size-4 text-muted" /> {title}
+      <h2 className="flex items-center gap-2.5 text-base font-semibold">
+        <span className="squircle flex size-8 items-center justify-center rounded-control-sm bg-accent-soft text-accent-soft-foreground">
+          <Icon className="size-4" />
+        </span>
+        {title}
       </h2>
       {children}
     </section>
@@ -58,16 +62,26 @@ export function SidePanel({
 /** One labelled block of a side panel. */
 export function SidePanelSection({
   label,
+  icon: Icon,
+  description,
   children,
   className,
 }: {
   label: string
+  icon?: LucideIcon
+  description?: string
   children: ReactNode
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <span className="text-xs font-medium text-muted">{label}</span>
+    <div className={cn('flex flex-col gap-3 border-t border-border pt-5', className)}>
+      <div className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-2 text-sm font-medium">
+          {Icon && <Icon className="size-4 text-muted" />}
+          {label}
+        </span>
+        {description && <span className="text-xs text-muted">{description}</span>}
+      </div>
       {children}
     </div>
   )

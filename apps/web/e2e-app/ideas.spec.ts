@@ -177,7 +177,7 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await page.getByRole('button', { name: '2 replies' }).click()
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
   // the thread line folds it too
-  await page.getByRole('button', { name: 'Hide or show the replies' }).click()
+  await page.getByRole('button', { name: 'Hide replies' }).click()
   await expect(page.locator('ol ol')).toHaveCount(0)
   await page.getByRole('button', { name: '2 replies' }).click()
 
@@ -216,7 +216,8 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
 
   await mod.goto(url)
   await mod.waitForLoadState('networkidle')
-  await expect(mod.getByText('Moderation')).toBeVisible()
+  // the moderation panel waits for the permission check
+  await expect(mod.getByRole('region', { name: 'Moderation' })).toBeVisible({ timeout: 15_000 })
   // remove the author's comment
   await mod.getByRole('button', { name: 'Comment actions' }).first().click()
   await mod.getByRole('menuitem', { name: 'Remove comment' }).click()

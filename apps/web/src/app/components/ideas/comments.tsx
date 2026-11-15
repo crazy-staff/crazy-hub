@@ -4,9 +4,9 @@
  * restore / pin, reactions.
  *
  * Threads look like YouTube's (owner's note, #45): a line runs down from the first comment's avatar
- * and curves into every reply's avatar, then into the "Hide replies" row; folded, it curves into
- * "N replies". The whole line lights up when any part of it is hovered, and it folds or unfolds on
- * click. A thread whose comments are all removed is not shown at all.
+ * and curves into every reply's avatar; folded, it curves into "N replies". The line itself folds and
+ * unfolds the thread (no separate button) and lights up as a whole when any part is hovered. A
+ * thread whose comments are all removed is not shown at all.
  */
 import { AlertDialog, Avatar, Button, Chip, DropdownMenu, cn } from '@crazy-staff/ui'
 import { useNavigate } from '@tanstack/react-router'
@@ -21,7 +21,7 @@ import {
   RotateCcw,
   Trash2,
 } from 'lucide-react'
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react'
 import type { PostCommentId, PostId } from '@quackback/ids'
 import type { PublicCommentView } from '@/lib/client/queries/portal-detail'
 import {
@@ -208,8 +208,8 @@ function CommentComposer({
  *   column starts at 3.5rem; the line starts 0.5rem under the avatar (top 3.25rem);
  * - a reply's row starts 0.75rem left of the text column, so the line runs 1rem left of the reply
  *   row's edge, and the reply's avatar centre is 1.75rem down from the row's top;
- * - the last row ("Hide replies" / "N replies") is 2rem tall, its centre 1.75rem above the bottom of
- *   the first comment's row.
+ * - unfolded, the line ends where the last reply's curve begins (measured, `railEnd`); folded, it
+ *   curves into the "N replies" row, 2rem tall, its centre 1.75rem above the bottom of the row.
  */
 
 function CommentItem({
@@ -244,9 +244,28 @@ function CommentItem({
   const closed = threads.isCollapsed(comment.id)
   const reactions = useReactions(postId, comment.id, comment.reactions ?? [])
   const toggle = () => threads.set(comment.id, !closed)
+  // where the line ends when unfolded: the centre of the last reply's avatar, minus its curve
+  const rowRef = useRef<HTMLLIElement>(null)
+  const [railEnd, setRailEnd] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const row = rowRef.current
+    if (!row || thread.length === 0 || closed) return
+    const measure = () => {
+      const avatars = row.querySelectorAll('[data-thread-avatar]')
+      const last = avatars[avatars.length - 1]
+      if (!last) return
+      const a = last.getBoundingClientRect()
+      setRailEnd(a.top + a.height / 2 - row.getBoundingClientRect().top)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(row)
+    return () => observer.disconnect()
+  }, [thread.length, closed])
 
   return (
     <li
+      ref={rowRef}
       id={`comment-${comment.id}`}
       className={cn(
         // the highlight after a jump uses the comment's own radius: a soft tint that fades out
@@ -268,30 +287,38 @@ function CommentItem({
       )}
       <Avatar
         size="sm"
+        data-thread-avatar={inThread ? '' : undefined}
         className="relative size-8 shrink-0"
         src={comment.avatarUrl ?? undefined}
         name={comment.authorName ?? '?'}
       />
       {thread.length > 0 && (
         <>
-          {/* the thread line: down from the avatar to the last row, where it curves in */}
+          {/* the thread line: down from the avatar; a click folds or unfolds the thread */}
           <button
             type="button"
             data-thread-line=""
-            aria-label={m.ideas_toggle_replies()}
+            aria-label={closed ? m.ideas_show_replies() : m.ideas_hide_replies()}
             aria-expanded={!closed}
             onClick={toggle}
-            className="absolute start-3 top-[3.25rem] bottom-[2.5rem] flex w-8 cursor-pointer justify-center outline-none"
+            className={cn(
+              'absolute start-3 top-[3.25rem] flex w-8 cursor-pointer justify-center outline-none',
+              (closed || railEnd === null) && 'bottom-[2.5rem]'
+            )}
+            // unfolded: down to where the last reply's curve starts (0.75rem above its centre)
+            style={!closed && railEnd !== null ? { height: railEnd - 52 - 12 + 2 } : undefined}
           >
             <span className={cn('w-0.5', LINE_BG)} />
           </button>
-          <span
-            aria-hidden
-            className={cn(
-              'pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-3 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2',
-              LINE
-            )}
-          />
+          {closed && (
+            <span
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-3 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2',
+                LINE
+              )}
+            />
+          )}
         </>
       )}
       {/* deleting asks first (owner's note, round 4) */}
@@ -426,28 +453,17 @@ function CommentItem({
             ))}
           </ol>
         )}
-        {thread.length > 0 && (
-          // the last row, where the line curves in: "Hide replies", or folded "N replies"
+        {thread.length > 0 && closed && (
+          // folded: the line curves into "N replies" (with the repliers' faces), which unfolds it
           <button
             type="button"
             data-thread-line=""
-            aria-expanded={!closed}
+            aria-expanded={false}
             onClick={toggle}
-            className={cn(
-              'flex h-8 w-fit cursor-pointer items-center gap-2 rounded-control-sm pe-2 text-sm font-medium outline-none transition-colors',
-              closed
-                ? 'mt-1 text-accent hover:brightness-110'
-                : 'mt-3 text-muted hover:text-foreground'
-            )}
+            className="mt-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-control-sm pe-2 text-sm font-medium text-accent outline-none transition-[filter] hover:brightness-110"
           >
-            {closed ? (
-              <>
-                <AvatarStack people={thread.map((t) => t.reply)} />
-                {m.ideas_replies_count({ count: thread.length })}
-              </>
-            ) : (
-              m.ideas_hide_replies()
-            )}
+            <AvatarStack people={thread.map((t) => t.reply)} />
+            {m.ideas_replies_count({ count: thread.length })}
           </button>
         )}
       </div>
