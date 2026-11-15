@@ -291,7 +291,9 @@ function PanelScroller({ children }: { children: ReactNode }) {
           'relative min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable] [scrollbar-width:thin]',
           // the docs' page geometry (see PageFrame): 760px page + 304px right column, centred together
           '[--page-width:760px] [--toc-width:--spacing(76)] @max-5xl:[--toc-width:0px]',
-          'px-4 md:px-[max(--spacing(6),calc((100%-var(--page-width)-var(--toc-width))/2))] md:pt-14'
+          // the top bar floats over the page at every width, so the page starts under it (owner's
+          // note: on phones the title ran under the bar's buttons)
+          'px-4 pt-14 md:px-[max(--spacing(6),calc((100%-var(--page-width)-var(--toc-width))/2))]'
         )}
       >
         <div className="min-h-full">{children}</div>

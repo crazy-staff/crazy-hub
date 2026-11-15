@@ -197,6 +197,16 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(page.getByText('Reply to the reply')).toBeHidden()
   await expect(page.getByText('First comment')).toBeVisible()
 
+  // the profile counts the comment and the reply and lists them with what was written
+  await page.getByRole('link', { name: 'Comment Author' }).first().click()
+  await expect(page).toHaveURL(/\/u\/principal_/)
+  const activity = page.getByRole('list').filter({ hasText: 'Replied in' })
+  await expect(activity.getByText('An edited reply')).toBeVisible()
+  await expect(activity.getByText('Commented on')).toBeVisible()
+  await expect(activity.getByText('Posted an idea')).toBeVisible()
+  await expect(page.getByText('Comments', { exact: true }).locator('..')).toContainText('2')
+  await page.goto(url)
+
   // a moderator of the trainer (role given in the database, Discord faked)
   const mod = await browser.newPage()
   const modEmail = await signUp(mod, 'Idea Moderator')

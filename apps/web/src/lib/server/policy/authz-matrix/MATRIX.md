@@ -1083,7 +1083,7 @@ Key scopes are enforced: an API key holds exactly its stored scopes (owner permi
 
 ## 4. Entry points without a requireAuth/key gate
 
-263 of 1134 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
+264 of 1135 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
 Each is expected to be intentionally public, a pre-auth flow, a signature-verified webhook, or a handler that delegates auth (e.g. the MCP route).
 **Adding a row here is an access-control change** — confirm the new entry point is meant to be reachable without a gate.
 
@@ -1122,6 +1122,7 @@ Each is expected to be intentionally public, a pre-auth flow, a signature-verifi
 | `lib/server/crazy/ideas-functions.ts`::restoreCommentFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::setIdeaStatusFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::setIdeaTagsFn | server-fn |
+| `lib/server/crazy/profile-functions.ts`::getProfileActivityFn | server-fn |
 | `lib/server/crazy/votes-functions.ts`::getIdeaVotesFn | server-fn |
 | `lib/server/crazy/votes-functions.ts`::voteIdeaFn | server-fn |
 | `lib/server/functions/admin.ts`::checkOnboardingState | server-fn |

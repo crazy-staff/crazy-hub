@@ -8,9 +8,11 @@
  */
 import { Collapsible, cn } from '@crazy-staff/ui'
 import { PanelRightClose, PanelRightOpen, type LucideIcon } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { m } from '../paraglide/messages.js'
 import { IconButton } from './icon-button'
+import { EASE } from './page'
 
 /**
  * Whether the page's right column is shown: the panel (`data-panel-container`, app-shell.tsx) is at
@@ -68,36 +70,50 @@ export function SidePanel({
   className?: string
 }) {
   const [hidden, setHidden] = usePanelHidden(id)
-  if (hidden) {
-    return (
-      <div className="flex justify-end">
-        <IconButton
-          label={m.panel_show({ title })}
-          variant="outline"
-          onClick={() => setHidden(false)}
-        >
-          <PanelRightOpen />
-        </IconButton>
-      </div>
-    )
-  }
+  const reduce = useReducedMotion()
+  // hiding slides the panel out to the right and fades it; the button to bring it back fades in
+  const motionProps = reduce
+    ? {}
+    : {
+        initial: { opacity: 0, x: 24, filter: 'blur(4px)' },
+        animate: { opacity: 1, x: 0, filter: 'blur(0px)' },
+        exit: { opacity: 0, x: 24, filter: 'blur(4px)' },
+        transition: { duration: 0.28, ease: EASE },
+      }
   return (
-    <section
-      aria-label={title}
-      className={cn(
-        // a bit wider than the column's text start: the right column has room to spare
-        'squircle -ms-8 flex w-[calc(100%+2rem)] flex-col gap-5 rounded-card border border-border bg-surface p-5',
-        className
+    <AnimatePresence mode="wait" initial={false}>
+      {hidden ? (
+        <motion.div key="show" className="flex justify-end" {...motionProps}>
+          <IconButton
+            label={m.panel_show({ title })}
+            variant="outline"
+            onClick={() => setHidden(false)}
+          >
+            <PanelRightOpen />
+          </IconButton>
+        </motion.div>
+      ) : (
+        <motion.section
+          key="panel"
+          aria-label={title}
+          className={cn(
+            // a bit wider than the column's text start (the right column has room to spare), and
+            // pulled up so its header lines up with the page title
+            'squircle -ms-8 -mt-5 flex w-[calc(100%+2rem)] flex-col gap-5 rounded-card border border-border bg-surface p-5',
+            className
+          )}
+          {...motionProps}
+        >
+          <header className="-mt-1 -me-1 flex items-center justify-between gap-2">
+            <h2 className="text-base font-semibold">{title}</h2>
+            <IconButton label={m.panel_hide()} size="icon-sm" onClick={() => setHidden(true)}>
+              <PanelRightClose />
+            </IconButton>
+          </header>
+          {children}
+        </motion.section>
       )}
-    >
-      <header className="-mt-1 -me-1 flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <IconButton label={m.panel_hide()} size="icon-sm" onClick={() => setHidden(true)}>
-          <PanelRightClose />
-        </IconButton>
-      </header>
-      {children}
-    </section>
+    </AnimatePresence>
   )
 }
 

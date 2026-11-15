@@ -207,7 +207,8 @@ function CommentComposer({
  * - in the first comment's row the avatar's centre is 1.75rem from the row's edge and the text
  *   column starts at 3.5rem; the line starts 0.5rem under the avatar (top 3.25rem);
  * - a reply's row starts 0.75rem left of the text column, so the line runs 1rem left of the reply
- *   row's edge, and the reply's avatar centre is 1.75rem down from the row's top;
+ *   row's edge, and the reply's avatar centre is 1.75rem down from the row's top; each curve is
+ *   1.75rem tall with a 1.5rem radius and ends at the avatar's edge;
  * - unfolded, the line ends where the last reply's curve begins (measured, `railEnd`); folded, it
  *   curves into the "N replies" row, 2rem tall, its centre 1.75rem above the bottom of the row.
  */
@@ -280,7 +281,7 @@ function CommentItem({
         <span
           aria-hidden
           className={cn(
-            'pointer-events-none absolute -start-[calc(1rem+1px)] top-4 h-3 w-[calc(1.5rem+1px)] rounded-es-lg border-s-2 border-b-2',
+            'pointer-events-none absolute -start-[calc(1rem+1px)] top-0 h-7 w-[calc(1.75rem+1px)] rounded-es-3xl border-s-2 border-b-2',
             LINE
           )}
         />
@@ -303,10 +304,10 @@ function CommentItem({
             onClick={toggle}
             className={cn(
               'absolute start-3 top-[3.25rem] flex w-8 cursor-pointer justify-center outline-none',
-              (closed || railEnd === null) && 'bottom-[2.5rem]'
+              (closed || railEnd === null) && 'bottom-[calc(3.5rem-2px)]'
             )}
-            // unfolded: down to where the last reply's curve starts (0.75rem above its centre)
-            style={!closed && railEnd !== null ? { height: railEnd - 52 - 12 + 2 } : undefined}
+            // unfolded: down to where the last reply's curve starts (1.75rem above its centre)
+            style={!closed && railEnd !== null ? { height: railEnd - 52 - 28 + 2 } : undefined}
           >
             <span className={cn('w-0.5', LINE_BG)} />
           </button>
@@ -314,7 +315,7 @@ function CommentItem({
             <span
               aria-hidden
               className={cn(
-                'pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-3 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2',
+                'pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-7 w-[calc(1.75rem+1px)] rounded-es-3xl border-s-2 border-b-2',
                 LINE
               )}
             />
