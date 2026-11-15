@@ -83,7 +83,7 @@ export function PageFrame({
         className
       )}
     >
-      <article className="flex w-full max-w-(--page-width) min-w-0 flex-col gap-4 pt-6 pb-8">
+      <article className="flex w-full max-w-(--page-width) min-w-0 flex-col gap-4 pt-6 pb-20">
         {children}
       </article>
       <aside

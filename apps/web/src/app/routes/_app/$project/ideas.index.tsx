@@ -19,7 +19,8 @@ import { useSessionContext } from '@/lib/client/hooks/use-root-context'
 import { m } from '../../../paraglide/messages.js'
 import { Page } from '../../../components/page'
 import { IdeaCard } from '../../../components/ideas/idea-card'
-import { NewIdeaDialog } from '../../../components/ideas/new-idea-dialog'
+import { NewIdeaWizard } from '../../../components/ideas/new-idea-wizard'
+import { Appear } from '../../../components/appear'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../../../lib/ideas'
 import { SECTION_META } from '../../../lib/projects'
@@ -197,7 +198,7 @@ function Ideas() {
           description={search.q || activeFilters ? undefined : m.ideas_empty_text()}
         />
       ) : (
-        <div className={cn('flex flex-col gap-3', posts.isFetching && 'opacity-80')}>
+        <Appear className={cn('flex flex-col gap-3', posts.isFetching && 'opacity-80')}>
           {items.map((post) => (
             <IdeaCard
               key={post.id}
@@ -208,10 +209,10 @@ function Ideas() {
           ))}
           <div ref={sentinel} />
           {posts.isFetchingNextPage && <Skeleton className="h-24 rounded-card" />}
-        </div>
+        </Appear>
       )}
       {creating && (
-        <NewIdeaDialog project={project} boardId={board?.id} onClose={() => setCreating(false)} />
+        <NewIdeaWizard project={project} boardId={board?.id} onClose={() => setCreating(false)} />
       )}
     </Page>
   )

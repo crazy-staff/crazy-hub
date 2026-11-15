@@ -127,10 +127,33 @@ export async function setIdeaTags(postId: string, tagIds: string[]) {
   )
 }
 
+/**
+ * Deletes an idea: anyone with `ideas.delete` in its project, or its author while nobody else has
+ * engaged with it (no comments, no votes besides the author's own: Quackback counts that one, so its
+ * own author-delete rule never lets an author delete). Throws `idea-has-engagement` otherwise.
+ */
 export async function deleteIdea(postId: string) {
-  const access = await requireIdeaPermission(postId, 'ideas.delete')
+  const access = await getOptionalHubAccess()
+  if (!access) throw new Error('Authentication required')
+  const projectId = await projectOfPost(postId)
+  if (!projectId) throw new Error('Not found')
+  if (!access.permissionsIn(projectId).has('ideas.delete')) {
+    const [post] = await db
+      .select({
+        principalId: posts.principalId,
+        voteCount: posts.voteCount,
+        commentCount: posts.commentCount,
+      })
+      .from(posts)
+      .where(eq(posts.id, postId as PostId))
+      .limit(1)
+    if (!post || post.principalId !== access.principalId) {
+      throw new Error("Access denied: Requires crazy-hub permission 'ideas.delete'")
+    }
+    if (post.commentCount > 0 || post.voteCount > 1) throw new Error('idea-has-engagement')
+  }
   const { softDeletePost } = await import('@/lib/server/domains/posts/post.user-actions')
-  // a team role skips the author-only rules; the permission was checked above
+  // a team role skips Quackback's author-only rules; the checks above decide
   await softDeletePost(postId as PostId, {
     principalId: access.principalId,
     role: 'member',

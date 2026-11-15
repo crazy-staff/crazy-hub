@@ -22,6 +22,19 @@ test.afterAll(async () => {
   await sql.end()
 })
 
+/** Goes through the step-by-step form: kind, what it concerns, details, review. */
+async function postIdea(page: import('@playwright/test').Page, title: string, description = '') {
+  await page.getByRole('button', { name: 'Post an idea' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Post an idea' })
+  await dialog.getByRole('radio', { name: /An idea/ }).click()
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  await dialog.getByLabel('Title').fill(title)
+  if (description) await dialog.getByRole('textbox', { name: 'Description' }).fill(description)
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  await expect(dialog.getByText(title)).toBeVisible()
+  await dialog.getByRole('button', { name: 'Post', exact: true }).click()
+}
+
 async function signUp(page: import('@playwright/test').Page, name: string) {
   const email = `e2e-${name.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}@example.com`
   await page.goto('/?auth=signup')
@@ -47,14 +60,8 @@ test('post an idea and vote on it', async ({ page }) => {
 
   await page.goto('/trainer/ideas')
   await page.waitForLoadState('networkidle')
-  await page.getByRole('button', { name: 'Post an idea' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Post an idea' })
   const title = `E2E idea ${Date.now()}`
-  await dialog.getByLabel('Title').fill(title)
-  await dialog
-    .getByRole('textbox', { name: 'Description' })
-    .fill('Posted by the **end-to-end** test.\n\n- one\n- two')
-  await dialog.getByRole('button', { name: 'Post', exact: true }).click()
+  await postIdea(page, title, 'Posted by the **end-to-end** test.\n\n- one\n- two')
 
   await expect(page).toHaveURL(/\/trainer\/ideas\/post_/)
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
@@ -87,11 +94,8 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   const authorEmail = await signUp(page, 'Comment Author')
   await page.goto('/trainer/ideas')
   await page.waitForLoadState('networkidle')
-  await page.getByRole('button', { name: 'Post an idea' }).click()
   const title = `E2E comments ${Date.now()}`
-  const post = page.getByRole('dialog', { name: 'Post an idea' })
-  await post.getByLabel('Title').fill(title)
-  await post.getByRole('button', { name: 'Post', exact: true }).click()
+  await postIdea(page, title)
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
     timeout: 15_000,
   })
@@ -107,16 +111,23 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await page.getByRole('button', { name: 'Reply', exact: true }).last().click()
   const replies = page.locator('ol ol')
   await expect(replies.getByText('A reply')).toBeVisible()
+  // a reply to a reply stays at one level and says what it answers
+  await replies.getByRole('button', { name: 'Reply' }).click()
+  await page.getByRole('textbox', { name: 'Comment' }).last().fill('Reply to the reply')
+  await page.getByRole('button', { name: 'Reply', exact: true }).last().click()
+  await expect(replies.getByText('Reply to the reply')).toBeVisible()
+  await expect(page.locator('ol ol ol')).toHaveCount(0)
+  await expect(replies.getByRole('button', { name: /Comment Author A reply/ })).toBeVisible()
 
-  // edit and delete the reply
-  await replies.getByRole('button', { name: 'Comment actions' }).click()
+  // edit the first reply, delete the last one
+  await replies.getByRole('button', { name: 'Comment actions' }).first().click()
   await page.getByRole('menuitem', { name: 'Edit' }).click()
   await page.getByRole('textbox', { name: 'Edit' }).fill('An edited reply')
   await page.getByRole('button', { name: 'Save' }).click()
-  await expect(replies.getByText('An edited reply')).toBeVisible()
-  await replies.getByRole('button', { name: 'Comment actions' }).click()
+  await expect(replies.getByText('An edited reply').first()).toBeVisible()
+  await replies.getByRole('button', { name: 'Comment actions' }).last().click()
   await page.getByRole('menuitem', { name: 'Delete' }).click()
-  await expect(page.getByText('An edited reply')).toBeHidden()
+  await expect(page.getByText('Reply to the reply')).toBeHidden()
   await expect(page.getByText('First comment')).toBeVisible()
 
   // a moderator of the trainer (role given in the database, Discord faked)
@@ -149,4 +160,35 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(mod.getByText('Comments are locked.')).toBeVisible()
   await mod.close()
   expect(authorEmail).toContain('@')
+})
+
+test('closing the form with changes asks first; deleting an idea leaves its page', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await signUp(page, 'Idea Deleter')
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: 'Post an idea' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Post an idea' })
+  await dialog.getByRole('radio', { name: /An idea/ }).click()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  const ask = page.getByRole('alertdialog', { name: 'Discard your changes?' })
+  await expect(ask).toBeVisible()
+  await ask.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Discard' }).click()
+  await expect(dialog).toBeHidden()
+
+  const title = `E2E delete ${Date.now()}`
+  await postIdea(page, title)
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
+    timeout: 15_000,
+  })
+  await page.getByRole('button', { name: 'Delete' }).first().click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(page).toHaveURL(/\/trainer\/ideas$/)
+  await expect(page.getByText(title)).toBeHidden()
 })

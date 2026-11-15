@@ -43,7 +43,7 @@ import {
   userDeleteCommentFn,
   userEditCommentFn,
 } from '@/lib/server/functions/comments'
-import { userDeletePostFn, userEditPostFn } from '@/lib/server/functions/public-posts'
+import { userEditPostFn } from '@/lib/server/functions/public-posts'
 import {
   deleteIdeaFn,
   getIdeaPermissionsFn,
@@ -132,13 +132,19 @@ function Idea() {
   const mine = !!me && post.principalId === me.principalId
   const moderates = !!can && (can.status || can.tags || can.delete || can.comments)
 
-  const removeIdea = async (asModerator: boolean) => {
-    const ok = await act(() =>
-      asModerator
-        ? deleteIdeaFn({ data: { postId } })
-        : userDeletePostFn({ data: { postId: postId as PostId } })
-    )
-    if (ok) void navigate({ to: '/$project/ideas', params: { project: project.slug } })
+  const queryClient = useQueryClient()
+  /** Deletes, then leaves at once: the deleted idea must not stay on screen (owner's note). */
+  const removeIdea = async () => {
+    try {
+      await deleteIdeaFn({ data: { postId } })
+    } catch (err) {
+      toast.error(errorMessage(err))
+      return
+    }
+    await navigate({ to: '/$project/ideas', params: { project: project.slug }, replace: true })
+    queryClient.removeQueries({ queryKey: ['portal', 'post', postId] })
+    await queryClient.invalidateQueries({ queryKey: publicPostsKeys.lists() })
+    toast.success(m.ideas_deleted())
   }
 
   return (
@@ -167,7 +173,7 @@ function Idea() {
                 cancelLabel={m.admin_cancel()}
                 actionLabel={m.admin_delete()}
                 tone="danger"
-                onAction={() => void removeIdea(false)}
+                onAction={() => void removeIdea()}
               />
             </>
           )}
@@ -229,7 +235,7 @@ function Idea() {
                 cancelLabel={m.admin_cancel()}
                 actionLabel={m.admin_delete()}
                 tone="danger"
-                onAction={() => void removeIdea(true)}
+                onAction={() => void removeIdea()}
               />
             )}
           </Card.Root>
@@ -341,6 +347,7 @@ function EditIdeaDialog({
         if (!open) onClose()
       }}
       title={m.ideas_edit()}
+      dirty={title !== initialTitle || body !== content}
       onSubmit={async () => {
         const markdown = body.trim()
         const contentJson = markdown ? await markdownToContentFn({ data: { markdown } }) : undefined
@@ -535,12 +542,15 @@ function CommentItem({
   canReply,
   moderator,
   root,
+  replyTo,
 }: {
   postId: string
   comment: PublicCommentView
   canReply: boolean
   moderator: boolean
   root?: boolean
+  /** In a thread: the reply this one answers, when it isn't the thread's first comment. */
+  replyTo?: PublicCommentView
 }) {
   const me = useMe()
   const act = useAct(postId)
@@ -551,7 +561,10 @@ function CommentItem({
   const json = (comment as { contentJson?: unknown }).contentJson
 
   return (
-    <li className="flex gap-3">
+    <li
+      id={`comment-${comment.id}`}
+      className="flex scroll-mt-24 gap-3 rounded-card transition-shadow"
+    >
       <Avatar
         size="sm"
         className="size-8 shrink-0"
@@ -618,6 +631,7 @@ function CommentItem({
             </DropdownMenu.Root>
           )}
         </div>
+        {replyTo && <ReplyToChip parent={replyTo} />}
         {editing ? (
           <EditComment
             postId={postId}
@@ -647,15 +661,18 @@ function CommentItem({
             onDone={() => setReplying(false)}
           />
         )}
-        {comment.replies?.length > 0 && (
+        {root && comment.replies?.length > 0 && (
+          // one level only (owner's note): every reply of the thread sits here, oldest first; a
+          // reply to a reply shows what it answers and jumps there
           <ol className="mt-3 flex flex-col gap-4 border-s border-border ps-4">
-            {comment.replies.map((reply) => (
+            {flattenThread(comment).map(({ reply, parent }) => (
               <CommentItem
                 key={reply.id}
                 postId={postId}
-                comment={reply as PublicCommentView}
+                comment={reply}
                 canReply={canReply}
                 moderator={moderator}
+                replyTo={parent.id === comment.id ? undefined : parent}
               />
             ))}
           </ol>
@@ -714,5 +731,42 @@ function EditComment({
         </Button>
       </div>
     </div>
+  )
+}
+
+/** Every reply under a thread's first comment, oldest first, with the comment each one answers. */
+function flattenThread(rootComment: PublicCommentView) {
+  const out: { reply: PublicCommentView; parent: PublicCommentView }[] = []
+  const walk = (parent: PublicCommentView) => {
+    for (const reply of (parent.replies ?? []) as PublicCommentView[]) {
+      out.push({ reply, parent })
+      walk(reply)
+    }
+  }
+  walk(rootComment)
+  return out.sort((a, b) => +new Date(a.reply.createdAt) - +new Date(b.reply.createdAt))
+}
+
+/** "Replying to Name: snippet": a click scrolls to that comment and highlights it for a moment. */
+function ReplyToChip({ parent }: { parent: PublicCommentView }) {
+  const snippet = parent.deletedAt
+    ? m.ideas_comment_removed()
+    : parent.content.replace(/\s+/g, ' ').slice(0, 80)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const target = document.getElementById(`comment-${parent.id}`)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        target.classList.add('ring-2', 'ring-accent/60')
+        setTimeout(() => target.classList.remove('ring-2', 'ring-accent/60'), 1600)
+      }}
+      className="flex w-fit max-w-full items-center gap-1.5 rounded-control-sm border-s-2 border-accent/60 bg-surface-2/60 px-2 py-1 text-start text-xs text-muted hover:bg-hover"
+    >
+      <Reply className="size-3 shrink-0" />
+      <span className="shrink-0 font-medium text-foreground">{parent.authorName ?? '—'}</span>
+      <span className="truncate">{snippet}</span>
+    </button>
   )
 }
