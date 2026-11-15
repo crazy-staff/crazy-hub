@@ -17,7 +17,7 @@ import {
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Plus, X } from 'lucide-react'
-import { useDeferredValue, useState } from 'react'
+import { useState } from 'react'
 import {
   claimOwnerFn,
   deleteCategoryFn,
@@ -49,6 +49,7 @@ import {
   type RolesAdmin,
 } from '../../lib/admin'
 import { useProjects } from '../../lib/projects'
+import { useDebouncedValue } from '../../lib/use-debounced'
 
 /** Role categories, roles and who holds them (decision 13, #22). */
 export const Route = createFileRoute('/admin/roles')({
@@ -203,7 +204,7 @@ function GiveRoleDialog({ data, onClose }: { data: RolesAdmin; onClose: () => vo
   const queryClient = useQueryClient()
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const deferred = useDeferredValue(query.trim())
+  const deferred = useDebouncedValue(query.trim())
   const [person, setPerson] = useState<Omit<PersonAdmin, 'assignments'> | null>(null)
   const [roleId, setRoleId] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(projects[0]?.id ?? null)

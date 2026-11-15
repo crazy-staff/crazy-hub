@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { composeIdea, composeProblem, matchTag } from '../idea-wizard'
+import { composeIdea, composeProblem, matchTag, splitIdea, splitProblem } from '../idea-wizard'
 
 describe('composeProblem', () => {
   it('writes a heading per filled field and the version', () => {
@@ -30,5 +30,24 @@ describe('matchTag', () => {
     expect(matchTag(tags, 'game', 'Gothic  1')).toBe('2')
     expect(matchTag(tags, 'category', 'arena')).toBe('3')
     expect(matchTag(tags, 'type', 'idea')).toBeUndefined()
+  })
+})
+
+describe('splitIdea / splitProblem', () => {
+  it('reads back what the wizard wrote', () => {
+    const idea = { what: 'A map\n\n- with pins', how: '', why: 'Saves time' }
+    expect(splitIdea(composeIdea(idea))).toEqual(idea)
+    const problem = { happened: 'It crashed', steps: '1. Open', expected: '' }
+    expect(splitProblem(composeProblem(problem, '1.2'))).toEqual({
+      fields: problem,
+      version: '1.2',
+    })
+    expect(splitProblem(composeProblem(problem, ''))).toEqual({ fields: problem, version: '' })
+  })
+  it('gives up on other texts', () => {
+    expect(splitIdea('Just a text')).toBeNull()
+    expect(splitIdea('Intro\n\n## What should it do?\n\nx')).toBeNull()
+    expect(splitIdea('## Something else\n\nx')).toBeNull()
+    expect(splitProblem('## What should it do?\n\nx')).toBeNull()
   })
 })

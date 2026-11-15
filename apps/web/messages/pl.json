@@ -1,7 +1,5 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "theme_to_light": "Przełącz na jasny motyw",
-  "theme_to_dark": "Przełącz na ciemny motyw",
   "language": "Język",
   "loading_page": "Ładowanie strony",
   "nav_label": "Główna nawigacja",
@@ -381,5 +379,13 @@
   "ideas_unfollow": "Przestań obserwować",
   "ideas_followed": "Będziesz dostawać powiadomienia o tym pomyśle.",
   "ideas_unfollowed": "Nie obserwujesz już tego pomysłu.",
-  "ideas_all_boards": "Wszystkie boardy"
+  "ideas_all_boards": "Wszystkie boardy",
+  "theme": "Motyw",
+  "theme_light": "Jasny",
+  "theme_dark": "Ciemny",
+  "theme_system": "Systemowy",
+  "ideas_comment_delete_confirm": "Usunąć ten komentarz?",
+  "settings_avatar_remove_confirm": "Usunąć avatar?",
+  "ideas_search_open": "Szukaj pomysłów",
+  "ideas_toggle_replies": "Ukryj lub pokaż odpowiedzi"
 }

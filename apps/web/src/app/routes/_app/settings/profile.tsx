@@ -1,4 +1,4 @@
-import { Avatar, Button, Card, Field, Input, toast } from '@crazy-staff/ui'
+import { Avatar, Button, Card, Field, Input, toast, AlertDialog } from '@crazy-staff/ui'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useRef, useState, type FormEvent } from 'react'
@@ -74,16 +74,26 @@ function Profile() {
             {m.settings_avatar_upload()}
           </Button>
           {profile.hasCustomAvatar && (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={remove.isPending}
-              onClick={() =>
+            // destructive: red, and it asks first (owner's rule)
+            <AlertDialog
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={remove.isPending}
+                  className="text-danger hover:bg-danger/10 hover:text-danger"
+                >
+                  {m.settings_avatar_remove()}
+                </Button>
+              }
+              title={m.settings_avatar_remove_confirm()}
+              cancelLabel={m.admin_cancel()}
+              actionLabel={m.settings_avatar_remove()}
+              tone="danger"
+              onAction={() =>
                 remove.mutate(undefined, { onSuccess: () => void router.invalidate() })
               }
-            >
-              {m.settings_avatar_remove()}
-            </Button>
+            />
           )}
         </div>
       </Card>

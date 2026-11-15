@@ -41,8 +41,10 @@ export function VoteButton({
     }
     vote.press(direction)
   }
+  // the original full-width arrows; the owner asked only for room between them and the score
   const arrow = cn(
-    'squircle flex w-full flex-1 cursor-pointer items-center justify-center rounded-control-sm outline-none',
+    'squircle flex w-full shrink-0 cursor-pointer items-center justify-center rounded-control-sm outline-none',
+    size === 'lg' ? 'h-7' : 'h-6',
     'transition-colors duration-[var(--cui-duration-fast)] ease-ui hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring',
     'disabled:cursor-default'
   )
@@ -50,8 +52,8 @@ export function VoteButton({
   return (
     <div
       className={cn(
-        'squircle flex shrink-0 flex-col items-center rounded-control border p-0.5 font-semibold tabular-nums transition-colors',
-        size === 'lg' ? 'h-24 w-14 text-base' : 'h-20 w-12 text-sm',
+        'squircle flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-control border p-0.5 font-semibold tabular-nums transition-colors',
+        size === 'lg' ? 'w-14 text-base' : 'w-12 text-sm',
         vote.vote === 'up' && 'border-accent bg-accent-soft/60',
         vote.vote === 'down' && 'border-danger/60 bg-danger/8',
         vote.vote === null && 'border-border bg-surface'

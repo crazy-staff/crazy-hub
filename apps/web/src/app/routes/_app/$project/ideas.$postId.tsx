@@ -22,7 +22,8 @@ import {
 } from '@tanstack/react-router'
 import {
   ArrowLeft,
-  ChevronRight,
+  CircleMinus,
+  CirclePlus,
   CornerUpLeft,
   EyeOff,
   Lock,
@@ -68,11 +69,20 @@ import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
 import { TagPicker } from '../../../components/ideas/tag-picker'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IconButton } from '../../../components/icon-button'
+import { AuthorLink } from '../../../components/author-link'
 import { FollowButton } from '../../../components/ideas/follow-button'
 import { ReactionChips, ReactionPicker, useReactions } from '../../../components/ideas/reactions'
 import { errorMessage } from '../../../lib/admin'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
 import { plainText } from '../../../lib/ideas'
+import {
+  composeIdea,
+  composeProblem,
+  splitIdea,
+  splitProblem,
+  type IdeaFields,
+  type ProblemFields,
+} from '../../../lib/idea-wizard'
 
 /**
  * One idea (#5): vote, title, status, tags, author, the formatted text, the official response, a
@@ -176,7 +186,7 @@ function Idea() {
               </IconButton>
               <AlertDialog
                 trigger={
-                  <IconButton label={m.admin_delete()}>
+                  <IconButton label={m.admin_delete()} tone="danger">
                     <Trash2 />
                   </IconButton>
                 }
@@ -286,7 +296,8 @@ function Idea() {
                 name={post.authorName ?? '?'}
               />
               <span>
-                {post.authorName ?? '—'} · {formatDate(post.createdAt)}
+                <AuthorLink principalId={post.principalId}>{post.authorName ?? '—'}</AuthorLink> ·{' '}
+                {formatDate(post.createdAt)}
               </span>
             </div>
           </div>
@@ -342,6 +353,23 @@ function Idea() {
   )
 }
 
+/** The editable sections of a text the wizard wrote (labels as in the wizard). */
+const IDEA_SECTIONS = [
+  { key: 'what', label: m.wizard_idea_what, hint: m.wizard_idea_what_hint, rows: 3 },
+  { key: 'how', label: m.wizard_idea_how, hint: m.wizard_idea_how_hint, rows: 4 },
+  { key: 'why', label: m.wizard_idea_why, hint: m.wizard_idea_why_hint, rows: 2 },
+] as const
+const PROBLEM_SECTIONS = [
+  { key: 'happened', label: m.wizard_happened, hint: m.wizard_happened_hint, rows: 4 },
+  { key: 'steps', label: m.wizard_steps_to_reproduce, hint: m.wizard_optional, rows: 3 },
+  { key: 'expected', label: m.wizard_expected, hint: m.wizard_optional, rows: 2 },
+] as const
+
+/**
+ * Editing an idea (owner's note, round 4): a text the wizard wrote is edited in the same sections
+ * (idea: what / how / why; problem: what happened / steps / expected + version) and composed back;
+ * any other text is edited as one.
+ */
 function EditIdeaDialog({
   postId,
   title: initialTitle,
@@ -354,8 +382,43 @@ function EditIdeaDialog({
   onClose: () => void
 }) {
   const act = useAct(postId)
+  const [initial] = useState(() => {
+    const idea = splitIdea(content)
+    if (idea)
+      return {
+        kind: 'idea' as const,
+        fields: idea as unknown as Record<string, string>,
+        version: '',
+      }
+    const problem = splitProblem(content)
+    if (problem)
+      return {
+        kind: 'problem' as const,
+        fields: problem.fields as unknown as Record<string, string>,
+        version: problem.version,
+      }
+    return {
+      kind: 'text' as const,
+      fields: { body: content } as Record<string, string>,
+      version: '',
+    }
+  })
   const [title, setTitle] = useState(initialTitle)
-  const [body, setBody] = useState(content)
+  const [fields, setFields] = useState<Record<string, string>>(initial.fields)
+  const [version, setVersion] = useState(initial.version)
+  const [checked, setChecked] = useState(false)
+
+  const markdown =
+    initial.kind === 'idea'
+      ? composeIdea(fields as unknown as IdeaFields)
+      : initial.kind === 'problem'
+        ? composeProblem(fields as unknown as ProblemFields, version)
+        : (fields.body ?? '').trim()
+  const firstKey = initial.kind === 'idea' ? 'what' : initial.kind === 'problem' ? 'happened' : null
+  const missing = firstKey ? !(fields[firstKey] ?? '').trim() : false
+  const sections = initial.kind === 'idea' ? IDEA_SECTIONS : PROBLEM_SECTIONS
+  const set = (key: string) => (value: string) => setFields((all) => ({ ...all, [key]: value }))
+
   return (
     <FormDialog
       open
@@ -364,9 +427,16 @@ function EditIdeaDialog({
         if (!open) onClose()
       }}
       title={m.ideas_edit()}
-      dirty={title !== initialTitle || body !== content}
+      dirty={
+        title !== initialTitle ||
+        version !== initial.version ||
+        Object.keys(fields).some((k) => fields[k] !== initial.fields[k])
+      }
       onSubmit={async () => {
-        const markdown = body.trim()
+        if (missing) {
+          setChecked(true)
+          throw new Error(m.wizard_required())
+        }
         const contentJson = markdown ? await markdownToContentFn({ data: { markdown } }) : undefined
         // the dialog shows the error itself, so the change runs outside `act`
         await userEditPostFn({
@@ -380,7 +450,7 @@ function EditIdeaDialog({
         await act(async () => {})
       }}
     >
-      <Field label={m.ideas_title()} required>
+      <Field label={m.ideas_title()} description={m.wizard_title_hint()} required>
         <Input
           required
           maxLength={200}
@@ -388,7 +458,39 @@ function EditIdeaDialog({
           onChange={(e) => setTitle(e.currentTarget.value)}
         />
       </Field>
-      <MarkdownEditor label={m.ideas_description()} value={body} onChange={setBody} />
+      {initial.kind === 'text' ? (
+        <MarkdownEditor
+          showLabel
+          label={m.ideas_description()}
+          value={fields.body ?? ''}
+          onChange={set('body')}
+        />
+      ) : (
+        <>
+          {sections.map((section, i) => (
+            <MarkdownEditor
+              key={section.key}
+              showLabel
+              required={i === 0}
+              label={section.label()}
+              hint={section.hint()}
+              error={i === 0 && checked && missing ? m.wizard_required() : null}
+              rows={section.rows}
+              value={fields[section.key] ?? ''}
+              onChange={set(section.key)}
+            />
+          ))}
+          {initial.kind === 'problem' && (
+            <Field label={m.wizard_version()} description={m.wizard_version_hint()}>
+              <Input
+                value={version}
+                maxLength={40}
+                onChange={(e) => setVersion(e.currentTarget.value)}
+              />
+            </Field>
+          )}
+        </>
+      )}
     </FormDialog>
   )
 }
@@ -599,6 +701,7 @@ function CommentItem({
   const act = useAct(postId)
   const [replying, setReplying] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const removed = !!comment.deletedAt
   const mine = !!me && comment.principalId === me.principalId
   const json = (comment as { contentJson?: unknown }).contentJson
@@ -612,7 +715,7 @@ function CommentItem({
       id={`comment-${comment.id}`}
       className={cn(
         // the highlight after a jump uses the comment's own radius: a soft tint that fades out
-        'squircle -m-3 flex scroll-mt-24 gap-3 rounded-card p-3',
+        'squircle relative -m-3 flex scroll-mt-24 gap-3 rounded-card p-3',
         'transition-[background-color,box-shadow] duration-700 ease-out motion-reduce:transition-none',
         'data-[flash]:bg-accent-soft/40 data-[flash]:ring-1 data-[flash]:ring-accent/20 data-[flash]:duration-200'
       )}
@@ -623,9 +726,46 @@ function CommentItem({
         src={comment.avatarUrl ?? undefined}
         name={comment.authorName ?? '?'}
       />
+      {thread.length > 0 && (
+        // the thread line under the avatar, as on Reddit (owner's note, round 4): it runs down past
+        // the replies and lights up on hover; a click folds or unfolds the thread. Folded, it ends in
+        // a curve that leads to the ⊕ "N replies" row.
+        <>
+          <button
+            type="button"
+            aria-label={m.ideas_toggle_replies()}
+            aria-expanded={!closed}
+            onClick={() => threads.set(comment.id, !closed)}
+            className={cn(
+              'group absolute start-3 top-[3.25rem] flex w-8 cursor-pointer justify-center outline-none',
+              closed ? 'bottom-[2.25rem]' : 'bottom-3'
+            )}
+          >
+            <span className="w-0.5 rounded-full bg-border transition-colors duration-150 group-hover:bg-accent group-focus-visible:bg-accent" />
+          </button>
+          {closed && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-2.5 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2 border-border"
+            />
+          )}
+        </>
+      )}
+      {/* deleting asks first (owner's note, round 4) */}
+      <AlertDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={m.ideas_comment_delete_confirm()}
+        cancelLabel={m.admin_cancel()}
+        actionLabel={m.admin_delete()}
+        tone="danger"
+        onAction={() => void act(() => userDeleteCommentFn({ data: { commentId: comment.id } }))}
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex min-h-7 flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">{comment.authorName ?? '—'}</span>
+          <AuthorLink principalId={comment.principalId} className="font-medium">
+            {comment.authorName ?? '—'}
+          </AuthorLink>
           {comment.isTeamMember && (
             <Chip size="sm" variant="soft">
               {m.ideas_team()}
@@ -647,11 +787,7 @@ function CommentItem({
                   </DropdownMenu.Item>
                 )}
                 {mine && !removed && (
-                  <DropdownMenu.Item
-                    onClick={() =>
-                      act(() => userDeleteCommentFn({ data: { commentId: comment.id } }))
-                    }
-                  >
+                  <DropdownMenu.Item danger onClick={() => setConfirmDelete(true)}>
                     <Trash2 /> {m.admin_delete()}
                   </DropdownMenu.Item>
                 )}
@@ -704,7 +840,7 @@ function CommentItem({
           />
         )}
         {((canReply && !removed && !editing) || thread.length > 0) && (
-          <div className="flex items-center gap-1 -ms-2">
+          <div className="relative -ms-2 flex min-h-8 items-center gap-1">
             {canReply && !removed && !editing && (
               <Button
                 variant="ghost"
@@ -718,23 +854,16 @@ function CommentItem({
             {canReply && !removed && !editing && (
               <ReactionPicker onPick={(emoji) => void reactions.toggle(emoji)} />
             )}
-            {thread.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted"
-                aria-expanded={!closed}
-                onClick={() => threads.set(comment.id, !closed)}
+            {thread.length > 0 && !closed && (
+              // ⊖ on the thread line, level with the actions (as on Reddit)
+              <button
+                type="button"
+                aria-label={m.ideas_hide_replies()}
+                onClick={() => threads.set(comment.id, true)}
+                className="absolute -start-[1.875rem] top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-background text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <ChevronRight
-                  className={cn(
-                    'transition-transform duration-200 motion-reduce:transition-none',
-                    !closed && 'rotate-90'
-                  )}
-                />
-                {closed && <AvatarStack people={thread.map((t) => t.reply)} />}
-                {m.ideas_replies_count({ count: thread.length })}
-              </Button>
+                <CircleMinus className="size-4" />
+              </button>
             )}
           </div>
         )}
@@ -751,10 +880,22 @@ function CommentItem({
             />
           </div>
         )}
+        {thread.length > 0 && closed && (
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => threads.set(comment.id, false)}
+            className="mt-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-control-sm pe-2 text-sm text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <CirclePlus className="size-5 shrink-0" />
+            <AvatarStack people={thread.map((t) => t.reply)} />
+            {m.ideas_replies_count({ count: thread.length })}
+          </button>
+        )}
         {thread.length > 0 && !closed && (
           // one level only (owner's note): every reply of the thread sits here, oldest first; a
           // reply to a reply shows what it answers and jumps there
-          <ol className="mt-4 flex flex-col gap-6 border-s-2 border-border ps-6">
+          <ol className="mt-4 flex flex-col gap-6">
             {thread.map(({ reply, parent }) => (
               <CommentItem
                 key={reply.id}

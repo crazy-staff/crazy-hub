@@ -108,6 +108,8 @@ test('post an idea and vote on it', async ({ page }) => {
 
   // it's in the list, and search finds it
   await page.getByRole('link', { name: 'All ideas' }).click()
+  // search is an icon until opened
+  await page.getByRole('button', { name: 'Search ideas' }).click()
   await page.getByRole('searchbox', { name: 'Search ideas' }).fill(title)
   await expect(page.getByRole('link', { name: new RegExp(title) })).toBeVisible()
 
@@ -169,11 +171,15 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
   await expect(page.locator('ol ol ol')).toHaveCount(0)
   await expect(replies.getByRole('button', { name: /Comment Author A reply/ })).toBeVisible()
-  // a thread collapses to its reply count and opens again
-  await page.getByRole('button', { name: '2 replies' }).click()
+  // ⊖ on the thread line folds it to "2 replies", which opens it again
+  await page.getByRole('button', { name: 'Hide replies' }).click()
   await expect(page.locator('ol ol')).toHaveCount(0)
   await page.getByRole('button', { name: '2 replies' }).click()
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
+  // the thread line folds it too
+  await page.getByRole('button', { name: 'Hide or show the replies' }).click()
+  await expect(page.locator('ol ol')).toHaveCount(0)
+  await page.getByRole('button', { name: '2 replies' }).click()
 
   // edit the first reply, delete the last one
   await replies.getByRole('button', { name: 'Comment actions' }).first().click()
@@ -183,6 +189,11 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(replies.getByText('An edited reply').first()).toBeVisible()
   await replies.getByRole('button', { name: 'Comment actions' }).last().click()
   await page.getByRole('menuitem', { name: 'Delete' }).click()
+  // deleting a comment asks first
+  await page
+    .getByRole('alertdialog', { name: 'Delete this comment?' })
+    .getByRole('button', { name: 'Delete' })
+    .click()
   await expect(page.getByText('Reply to the reply')).toBeHidden()
   await expect(page.getByText('First comment')).toBeVisible()
 

@@ -9,6 +9,7 @@ import type { IdeaVote } from '@/lib/shared/crazy/votes'
 import { excerpt } from '../../lib/ideas'
 import { StatusChip } from './status-chip'
 import { VoteButton } from './vote-button'
+import { AuthorLink } from '../author-link'
 
 export interface StatusInfo {
   id: string
@@ -47,15 +48,17 @@ export function IdeaCard({
           mine={mine}
         />
       </div>
-      <Link
-        to="/$project/ideas/$postId"
-        params={{ project, postId: post.id }}
-        className="flex min-w-0 flex-1 flex-col gap-2 rounded-control-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <span className="font-semibold">{post.title}</span>
-        {post.content && (
-          <span className="line-clamp-2 text-sm text-muted">{excerpt(post.content, 240)}</span>
-        )}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Link
+          to="/$project/ideas/$postId"
+          params={{ project, postId: post.id }}
+          className="flex flex-col gap-2 rounded-control-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="font-semibold">{post.title}</span>
+          {post.content && (
+            <span className="line-clamp-2 text-sm text-muted">{excerpt(post.content, 240)}</span>
+          )}
+        </Link>
         <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
           {showBoard && post.board && (
             <Chip size="sm" variant="outline">
@@ -69,14 +72,15 @@ export function IdeaCard({
             </Chip>
           ))}
           <span className="ms-1">
-            {post.authorName ?? '—'} · {dateFormat.format(new Date(post.createdAt))}
+            <AuthorLink principalId={post.principalId}>{post.authorName ?? '—'}</AuthorLink> ·{' '}
+            {dateFormat.format(new Date(post.createdAt))}
           </span>
           <span className="ms-auto inline-flex items-center gap-1">
             <MessageSquare className="size-3.5" />
             {post.commentCount}
           </span>
         </span>
-      </Link>
+      </div>
     </Card.Root>
   )
 }
