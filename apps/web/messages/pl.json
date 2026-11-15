@@ -391,15 +391,12 @@
   "project_board_name": "Nazwa",
   "project_board_description": "Opis",
   "project_board_created": "Board utworzony i dodany do projektu.",
-  "ideas_created": "Dodano",
   "ideas_moved": "Przeniesiono pomysł.",
   "ideas_admin_panel": "Admin",
   "ideas_project_settings": "Ustawienia projektu",
   "ideas_show_replies": "Pokaż odpowiedzi",
   "ideas_votes_up": "Za",
   "ideas_votes_down": "Przeciw",
-  "ideas_board_move_hint": "Przenosi pomysł razem z głosami i komentarzami.",
-  "ideas_no_tags": "Brak tagów.",
-  "ideas_lock_comments_hint": "Gdy włączone, nikt nie może komentować.",
-  "ideas_danger_zone": "Strefa niebezpieczna"
+  "panel_hide": "Ukryj panel",
+  "panel_show": "Pokaż: {title}"
 }

@@ -11,7 +11,7 @@ import {
 } from '@crazy-staff/ui'
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Pencil, PinOff, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, PinOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { PostId } from '@quackback/ids'
 import { portalDetailQueries } from '@/lib/client/queries/portal-detail'
@@ -20,6 +20,7 @@ import { publicPostsKeys } from '@/lib/client/hooks/use-portal-posts-query'
 import { userEditPostFn } from '@/lib/server/functions/public-posts'
 import {
   deleteIdeaFn,
+  editIdeaFn,
   getIdeaPermissionsFn,
   markdownToContentFn,
   pinCommentFn,
@@ -115,7 +116,6 @@ function Idea() {
         can={can}
         statuses={statuses}
         votes={{ up: votes?.up[post.id] ?? post.voteCount, down: votes?.down[post.id] ?? 0 }}
-        onDelete={() => void removeIdea()}
       />
     ) : null
 
@@ -126,18 +126,14 @@ function Idea() {
       toc={
         wide &&
         panel && (
-          <SidePanel title={m.ideas_moderation()} icon={ShieldCheck}>
+          <SidePanel id="idea-moderation" title={m.ideas_moderation()}>
             {panel}
           </SidePanel>
         )
       }
     >
       <article className="flex flex-col gap-8">
-        {!wide && panel && (
-          <SidePanelInline title={m.ideas_moderation()} icon={ShieldCheck}>
-            {panel}
-          </SidePanelInline>
-        )}
+        {!wide && panel && <SidePanelInline title={m.ideas_moderation()}>{panel}</SidePanelInline>}
         <div className="flex items-center gap-2">
           <Link
             to="/$project/ideas"
@@ -147,7 +143,8 @@ function Idea() {
             <ArrowLeft className="size-4" /> {m.ideas_back()}
           </Link>
           {me && <FollowButton postId={post.id} />}
-          {mine && (
+          {/* the author's and the moderators' own buttons stay here; the panel only adds to them */}
+          {(mine || can?.delete) && (
             <>
               <IconButton label={m.admin_edit()} onClick={() => setEditing(true)}>
                 <Pencil />
@@ -264,6 +261,7 @@ function Idea() {
           postId={postId}
           title={post.title}
           content={post.content}
+          asModerator={!mine}
           onClose={() => setEditing(false)}
         />
       )}
@@ -292,11 +290,14 @@ function EditIdeaDialog({
   postId,
   title: initialTitle,
   content,
+  asModerator,
   onClose,
 }: {
   postId: string
   title: string
   content: string
+  /** Someone else's idea: saved through the moderators' `editIdeaFn`. */
+  asModerator?: boolean
   onClose: () => void
 }) {
   const act = useAct(postId)
@@ -357,14 +358,20 @@ function EditIdeaDialog({
         }
         const contentJson = markdown ? await markdownToContentFn({ data: { markdown } }) : undefined
         // the dialog shows the error itself, so the change runs outside `act`
-        await userEditPostFn({
-          data: {
-            postId: postId as PostId,
-            title: title.trim(),
-            content: markdown,
-            contentJson: contentJson as never,
-          },
-        })
+        if (asModerator) {
+          await editIdeaFn({
+            data: { postId, title: title.trim(), content: markdown, contentJson },
+          })
+        } else {
+          await userEditPostFn({
+            data: {
+              postId: postId as PostId,
+              title: title.trim(),
+              content: markdown,
+              contentJson: contentJson as never,
+            },
+          })
+        }
         await act(async () => {})
       }}
     >

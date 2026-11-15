@@ -1,21 +1,20 @@
 /**
- * Moderation of one idea in the page's right column (owner's note, #45): the idea at a glance (votes
- * up and down, comments, author), then status, board, tags, comments and, apart, deleting it. What
- * shows depends on the caller's permissions in the idea's project (decision 13): `ideas.status`
- * (status and board), `ideas.tags`, `comments.moderate` (lock, official response), `ideas.delete`.
+ * Moderation of one idea in the page's right column (owner's note, #45), next to the page's own edit
+ * and delete buttons: the idea at a glance (votes for / against, comments, author), then status,
+ * board, tags and comments, icon-first with few words. What shows depends on the caller's
+ * permissions in the idea's project (decision 13): `ideas.status` (status and board), `ideas.tags`,
+ * `comments.moderate` (lock, official response), `ideas.delete`.
  */
-import { AlertDialog, Avatar, Button, Chip, Select, Switch, cn } from '@crazy-staff/ui'
+import { Avatar, Chip, Select, Switch, Tooltip, cn } from '@crazy-staff/ui'
 import {
   ArrowDown,
   ArrowUp,
   CircleDot,
   LayoutList,
+  Lock,
   MessageSquare,
-  MessagesSquare,
   PinOff,
   Tags,
-  Trash2,
-  TriangleAlert,
   type LucideIcon,
 } from 'lucide-react'
 import type { PublicPostDetailView } from '@/lib/client/queries/portal-detail'
@@ -29,6 +28,7 @@ import { m } from '../../paraglide/messages.js'
 import { formatDate, useAct } from '../../lib/idea-act'
 import type { HubProject } from '../../lib/projects'
 import { AuthorLink } from '../author-link'
+import { IconButton } from '../icon-button'
 import { SidePanelSection } from '../side-panel'
 import { TagsDialog } from './tags-dialog'
 import { countComments } from './comments'
@@ -40,7 +40,7 @@ export interface IdeaPermissions {
   comments: boolean
 }
 
-/** One number of the idea at a glance. */
+/** One number of the idea at a glance: an icon and the number, the name in a tooltip. */
 function Stat({
   icon: Icon,
   value,
@@ -53,19 +53,19 @@ function Stat({
   tone?: 'accent' | 'danger'
 }) {
   return (
-    <div className="squircle flex flex-col items-center gap-1 rounded-control bg-surface-2 px-2 py-3">
-      <span
+    <Tooltip content={label}>
+      <div
+        aria-label={`${label}: ${value}`}
         className={cn(
-          'flex items-center gap-1 text-lg leading-none font-semibold tabular-nums',
+          'squircle flex items-center justify-center gap-1.5 rounded-control bg-surface-2 py-2.5 text-base font-semibold tabular-nums',
           tone === 'accent' && 'text-accent',
           tone === 'danger' && 'text-danger'
         )}
       >
-        <Icon className="size-4" strokeWidth={2.5} />
+        <Icon className={cn('size-4', !tone && 'text-muted')} strokeWidth={2.5} />
         {value}
-      </span>
-      <span className="text-[0.6875rem] text-muted">{label}</span>
-    </div>
+      </div>
+    </Tooltip>
   )
 }
 
@@ -75,14 +75,12 @@ export function ModerationPanelContent({
   can,
   statuses,
   votes,
-  onDelete,
 }: {
   post: PublicPostDetailView
   project: HubProject
   can: IdeaPermissions
   statuses: { id: string; name: string; color: string | null }[]
   votes: { up: number; down: number }
-  onDelete: () => void
 }) {
   const postId = post.id as string
   const act = useAct(postId)
@@ -98,16 +96,12 @@ export function ModerationPanelContent({
             label={m.ideas_comments()}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Avatar size="sm" src={post.authorAvatarUrl ?? undefined} name={post.authorName ?? '?'} />
-          <div className="flex min-w-0 flex-col">
-            <AuthorLink principalId={post.principalId} className="truncate text-sm font-medium">
-              {post.authorName ?? '—'}
-            </AuthorLink>
-            <span className="text-xs text-muted">
-              {m.ideas_created()} {formatDate(post.createdAt)}
-            </span>
-          </div>
+          <AuthorLink principalId={post.principalId} className="truncate text-sm font-medium">
+            {post.authorName ?? '—'}
+          </AuthorLink>
+          <span className="ms-auto shrink-0 text-xs text-muted">{formatDate(post.createdAt)}</span>
         </div>
       </div>
 
@@ -129,11 +123,7 @@ export function ModerationPanelContent({
       )}
 
       {can.status && project.boards.length > 1 && (
-        <SidePanelSection
-          label={m.ideas_board()}
-          icon={LayoutList}
-          description={m.ideas_board_move_hint()}
-        >
+        <SidePanelSection label={m.ideas_board()} icon={LayoutList}>
           <Select
             aria-label={m.ideas_board()}
             value={post.board.id}
@@ -148,7 +138,13 @@ export function ModerationPanelContent({
       )}
 
       {can.tags && (
-        <SidePanelSection label={m.ideas_tags()} icon={Tags}>
+        <SidePanelSection
+          label={m.ideas_tags()}
+          icon={Tags}
+          actions={
+            <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} moderator iconOnly />
+          }
+        >
           {post.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
@@ -158,59 +154,37 @@ export function ModerationPanelContent({
               ))}
             </div>
           ) : (
-            <span className="text-sm text-muted">{m.ideas_no_tags()}</span>
+            <span className="text-sm text-muted">—</span>
           )}
-          <TagsDialog
-            postId={postId}
-            current={post.tags.map((t) => t.id)}
-            moderator
-            className="w-full"
-          />
         </SidePanelSection>
       )}
 
       {can.comments && (
-        <SidePanelSection label={m.ideas_comments()} icon={MessagesSquare}>
+        <SidePanelSection
+          label={m.ideas_comments()}
+          icon={MessageSquare}
+          actions={
+            post.pinnedComment ? (
+              <IconButton
+                label={m.ideas_unpin()}
+                size="icon-sm"
+                onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
+              >
+                <PinOff />
+              </IconButton>
+            ) : undefined
+          }
+        >
           <Switch
-            label={m.ideas_lock_comments()}
-            description={m.ideas_lock_comments_hint()}
+            label={
+              <span className="flex items-center gap-2">
+                <Lock className="size-4 text-muted" /> {m.ideas_lock_comments()}
+              </span>
+            }
             checked={!!post.isCommentsLocked}
             onCheckedChange={(locked) =>
               void act(() => lockCommentsFn({ data: { postId, locked } }))
             }
-          />
-          {post.pinnedComment && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
-            >
-              <PinOff /> {m.ideas_unpin()}
-            </Button>
-          )}
-        </SidePanelSection>
-      )}
-
-      {can.delete && (
-        <SidePanelSection
-          label={m.ideas_danger_zone()}
-          icon={TriangleAlert}
-          className="[&>div>span:first-child]:text-danger"
-        >
-          <AlertDialog
-            trigger={
-              <Button
-                variant="outline"
-                className="w-full border-danger/40 text-danger hover:bg-danger/10 hover:text-danger"
-              >
-                <Trash2 /> {m.ideas_delete()}
-              </Button>
-            }
-            title={m.ideas_delete_confirm()}
-            cancelLabel={m.admin_cancel()}
-            actionLabel={m.admin_delete()}
-            tone="danger"
-            onAction={onDelete}
           />
         </SidePanelSection>
       )}

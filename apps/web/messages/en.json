@@ -389,15 +389,12 @@
   "project_board_name": "Name",
   "project_board_description": "Description",
   "project_board_created": "Board created and added to the project.",
-  "ideas_created": "Posted",
   "ideas_moved": "Idea moved.",
   "ideas_admin_panel": "Admin",
   "ideas_project_settings": "Project settings",
   "ideas_show_replies": "Show replies",
   "ideas_votes_up": "For",
   "ideas_votes_down": "Against",
-  "ideas_board_move_hint": "Moves the idea with its votes and comments.",
-  "ideas_no_tags": "No tags yet.",
-  "ideas_lock_comments_hint": "Nobody can comment while it is on.",
-  "ideas_danger_zone": "Danger zone"
+  "panel_hide": "Hide panel",
+  "panel_show": "Show {title}"
 }

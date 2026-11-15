@@ -106,6 +106,28 @@ export async function moveIdea(postId: string, boardId: string) {
     .where(eq(posts.id, postId as PostId))
 }
 
+/**
+ * Edits someone else's idea (title and text) from the moderation side (owner's note, #45): the top
+ * bar's edit button for moderators. Needs `ideas.delete`, the strongest idea permission; authors edit
+ * their own ideas through Quackback's `userEditPostFn`.
+ */
+export async function editIdea(
+  postId: string,
+  input: { title: string; content: string; contentJson?: unknown }
+) {
+  const access = await requireIdeaPermission(postId, 'ideas.delete')
+  const { updatePost } = await import('@/lib/server/domains/posts/post.service')
+  await updatePost(
+    postId as PostId,
+    {
+      title: input.title.trim(),
+      content: input.content,
+      contentJson: (input.contentJson ?? null) as never,
+    },
+    { principalId: access.principalId, userId: access.userId }
+  )
+}
+
 /** Only these tags may be chosen by authors (Quackback's public tags). */
 async function publicTagIds(tagIds: string[]): Promise<string[]> {
   if (tagIds.length === 0) return []

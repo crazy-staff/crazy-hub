@@ -13,7 +13,7 @@ import {
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, useNavigate, useRouteContext } from '@tanstack/react-router'
-import { Filter, Lightbulb, Plus, Search, Settings2, X } from 'lucide-react'
+import { Filter, Lightbulb, Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
@@ -171,7 +171,7 @@ function Ideas() {
       toc={
         wide &&
         adminPanel && (
-          <SidePanel title={m.ideas_admin_panel()} icon={Settings2}>
+          <SidePanel id="ideas-admin" title={m.ideas_admin_panel()}>
             {adminPanel}
           </SidePanel>
         )
@@ -191,9 +191,7 @@ function Ideas() {
       }
     >
       {!wide && adminPanel && (
-        <SidePanelInline title={m.ideas_admin_panel()} icon={Settings2}>
-          {adminPanel}
-        </SidePanelInline>
+        <SidePanelInline title={m.ideas_admin_panel()}>{adminPanel}</SidePanelInline>
       )}
       {project.boards.length > 1 && (
         <Tabs
