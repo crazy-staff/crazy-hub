@@ -43,8 +43,8 @@ bun add @crazy-staff/ui @fontsource-variable/inter @fontsource-variable/geist-mo
 ```
 
 ```ts
-import { registerSquircles } from '@crazy-staff/ui';
-registerSquircles(); // once on the client
+import { registerSquircles } from '@crazy-staff/ui'
+registerSquircles() // once on the client
 ```
 
 Dark mode: `dark` class on `<html>`. Components never use `dark:`; only `--cui-*` token values change.
@@ -78,6 +78,9 @@ reinvent them:
   shapes use `squircle-motion`.
 - Pointer cursor on everything clickable; gentle press; motion only on transform/opacity with reduced
   motion respected.
+- Declutter (owner, 2026-11-15): no text where an icon carries the meaning (icon-only buttons with
+  `aria-label` + tooltip, counts in badges), generous whitespace, controls in one row share one size,
+  no outline around an already clear group. Full rule: crazy-ui `docs/guidelines.md` → _Declutter_.
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list
   every change with the page/link where it can be seen.
 
