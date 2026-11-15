@@ -450,3 +450,24 @@ export async function searchPeople(query: string) {
     .limit(10)
   return withDiscord(rows)
 }
+
+/**
+ * A new board for a project, made in the project's Boards tab (owner's note: boards could only be
+ * linked, not created, in the new admin). Quackback's own `createBoard` makes it (slug from the
+ * name, its validation and limits); then it is linked to the project.
+ */
+export async function createProjectBoard(
+  projectId: string,
+  input: { name: string; description: string }
+) {
+  const { createBoard } = await import('@/lib/server/domains/boards/board.service')
+  const board = await createBoard({
+    name: input.name.trim(),
+    description: input.description.trim() || null,
+  })
+  await db
+    .insert(crazyProjectBoards)
+    .values({ projectId, boardId: board.id as BoardId })
+    .onConflictDoNothing()
+  return { id: board.id as string, slug: board.slug }
+}

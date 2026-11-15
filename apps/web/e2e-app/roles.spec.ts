@@ -126,4 +126,18 @@ test('claim the Owner, give a project role (Discord with 2FA required), edit a p
   await row.getByRole('button', { name: 'Delete' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('gothic-3')).toBeHidden()
+
+  // a new board is created from the project's Boards tab and linked to it
+  const boardName = `E2E board ${Date.now()}`
+  await page.getByRole('tab', { name: 'Boards' }).click()
+  await page.getByRole('button', { name: 'New board' }).click()
+  const boardDialog = page.getByRole('dialog', { name: 'New board' })
+  await boardDialog.getByLabel('Name').fill(boardName)
+  await boardDialog.getByRole('button', { name: 'New board' }).click()
+  await expect(boardDialog).toBeHidden()
+  await expect(page.getByRole('checkbox', { name: new RegExp(boardName) })).toBeChecked()
+  const [linked] = await sql`
+    select count(*)::int as n from crazy_project_boards pb join boards b on b.id = pb.board_id
+    where b.name = ${boardName}`
+  expect(linked.n).toBe(1)
 })
