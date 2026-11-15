@@ -38,4 +38,6 @@ export interface HubProject {
   /** Enabled sections, in nav order. */
   sections: SectionId[]
   dimensions: HubDimension[]
+  /** The project's Quackback boards (its ideas are their posts), by name. */
+  boards: { id: string; slug: string; name: string }[]
 }
