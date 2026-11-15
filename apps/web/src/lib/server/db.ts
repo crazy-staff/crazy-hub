@@ -536,6 +536,7 @@ export {
   crazyRoles,
   crazyRoleAssignments,
   crazyDiscordMfa,
+  crazyPostDownvotes,
   CRAZY_SECTIONS,
   CRAZY_VALUE_STATUSES,
   CRAZY_ROLE_SCOPES,

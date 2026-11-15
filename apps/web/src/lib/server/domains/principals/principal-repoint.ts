@@ -466,6 +466,8 @@ export const REPOINT_EXEMPTIONS: Record<string, string> = {
   // an anonymous visitor, so an anonymous source principal holds no assignments to move.
   'crazy_role_assignments.principal_id':
     'crazy-hub roles are only given to signed-up accounts with Discord and 2FA; an anonymous source principal never holds one.',
+  'crazy_post_downvotes.principal_id':
+    'crazy-hub downvotes need a signed-in account (the vote function refuses anonymous principals), so an anonymous source principal never holds one.',
   'crazy_role_assignments.granted_by':
     'crazy-hub audit field: only role givers (signed-up accounts with a role) appear here, never an anonymous principal; ON DELETE SET NULL.',
   'workspace_assistant_threads.owner_principal_id':

@@ -367,5 +367,16 @@
         "countPlural=*": "{count} Antworten"
       }
     }
-  ]
+  ],
+  "ideas_downvote": "Gegen diese Idee stimmen",
+  "ideas_undownvote": "Gegenstimme zurücknehmen",
+  "ideas_score": "Wertung: {score}",
+  "ideas_react": "Reaktion hinzufügen",
+  "ideas_follow": "Dieser Idee folgen",
+  "ideas_following": "Du folgst dieser Idee",
+  "ideas_follow_all": "Alle Aktivitäten",
+  "ideas_follow_status": "Nur Statusänderungen",
+  "ideas_unfollow": "Nicht mehr folgen",
+  "ideas_followed": "Du bekommst Neuigkeiten zu dieser Idee.",
+  "ideas_unfollowed": "Du folgst dieser Idee nicht mehr."
 }

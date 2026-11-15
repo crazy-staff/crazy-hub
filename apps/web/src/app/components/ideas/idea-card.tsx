@@ -5,6 +5,7 @@ import { Card, Chip } from '@crazy-staff/ui'
 import { Link } from '@tanstack/react-router'
 import { MessageSquare } from 'lucide-react'
 import type { PublicPostListItem } from '@/lib/shared/types'
+import type { IdeaVote } from '@/lib/shared/crazy/votes'
 import { excerpt } from '../../lib/ideas'
 import { StatusChip } from './status-chip'
 import { VoteButton } from './vote-button'
@@ -21,15 +22,27 @@ export function IdeaCard({
   post,
   project,
   status,
+  upvotes,
+  downvotes,
+  mine,
 }: {
   post: PublicPostListItem
   project: string
   status?: StatusInfo
+  /** Fresher upvotes than the cached list page (from the votes query). */
+  upvotes?: number
+  downvotes?: number
+  mine?: IdeaVote
 }) {
   return (
     <Card.Root interactive className="relative flex items-start gap-5 p-5">
       <div className="relative z-10">
-        <VoteButton postId={post.id} voteCount={post.voteCount} />
+        <VoteButton
+          postId={post.id}
+          voteCount={upvotes ?? post.voteCount}
+          downvotes={downvotes}
+          mine={mine}
+        />
       </div>
       <Link
         to="/$project/ideas/$postId"

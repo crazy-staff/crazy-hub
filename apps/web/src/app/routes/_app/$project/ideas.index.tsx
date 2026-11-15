@@ -27,6 +27,7 @@ import { IconButton } from '../../../components/icon-button'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../../../lib/ideas'
 import { SECTION_META } from '../../../lib/projects'
+import { useIdeaVotes } from '../../../lib/idea-mutations'
 
 /**
  * A project's ideas (#5): the posts of its boards, sorted, searched and filtered by status and tags
@@ -77,6 +78,7 @@ function Ideas() {
     enabled: !!board,
   })
   const items = flattenPublicPosts(posts.data)
+  const votes = useIdeaVotes(items.map((p) => p.id)).data
   const statusOf = (id: string | null) => statuses.find((s) => s.id === id)
 
   // load the next page when the end of the list comes into view
@@ -229,6 +231,9 @@ function Ideas() {
               post={post}
               project={project.slug}
               status={post.statusId ? statusOf(post.statusId) : undefined}
+              upvotes={votes?.up[post.id]}
+              downvotes={votes?.down[post.id]}
+              mine={votes?.mine[post.id] ?? null}
             />
           ))}
           <div ref={sentinel} />
