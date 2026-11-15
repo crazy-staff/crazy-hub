@@ -98,6 +98,8 @@ export function RowActions({
               size="icon-sm"
               aria-label={m.admin_delete()}
               title={m.admin_delete()}
+              // destructive: always red (owner's rule)
+              className="text-danger hover:bg-danger/10 hover:text-danger"
             >
               <Trash2 />
             </Button>

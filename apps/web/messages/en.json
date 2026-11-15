@@ -1,7 +1,5 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "theme_to_light": "Switch to light theme",
-  "theme_to_dark": "Switch to dark theme",
   "language": "Language",
   "loading_page": "Loading page",
   "nav_label": "Main navigation",
@@ -379,5 +377,13 @@
   "ideas_unfollow": "Stop following",
   "ideas_followed": "You'll get updates on this idea.",
   "ideas_unfollowed": "You stopped following this idea.",
-  "ideas_all_boards": "All boards"
+  "ideas_all_boards": "All boards",
+  "theme": "Theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System",
+  "ideas_comment_delete_confirm": "Delete this comment?",
+  "settings_avatar_remove_confirm": "Remove your avatar?",
+  "ideas_search_open": "Search ideas",
+  "ideas_toggle_replies": "Hide or show the replies"
 }

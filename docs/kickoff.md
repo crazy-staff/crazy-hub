@@ -81,6 +81,9 @@ reinvent them:
 - Declutter (owner, 2026-11-15): no text where an icon carries the meaning (icon-only buttons with
   `aria-label` + tooltip, counts in badges), generous whitespace, controls in one row share one size,
   no outline around an already clear group. Full rule: crazy-ui `docs/guidelines.md` → _Declutter_.
+- Destructive actions are always red (owner, 2026-11-15): delete, remove, ban, avatar removal… use the
+  danger tone (red text/icon, red hover tint; `IconButton tone="danger"`, `DropdownMenu.Item danger`,
+  `AlertDialog tone="danger"`) and ask for confirmation first.
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list
   every change with the page/link where it can be seen.
 

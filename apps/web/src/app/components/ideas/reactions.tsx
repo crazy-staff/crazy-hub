@@ -103,7 +103,7 @@ export function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) 
           </IconButton>
         }
       />
-      <Popover.Content side="top" align="start" className="flex gap-1 p-1.5">
+      <Popover.Content side="top" align="start" className="flex w-auto gap-1 p-1.5">
         {REACTION_EMOJIS.map((emoji) => (
           <button
             key={emoji}

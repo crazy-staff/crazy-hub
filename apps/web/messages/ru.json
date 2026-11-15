@@ -1,7 +1,5 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "theme_to_light": "Светлая тема",
-  "theme_to_dark": "Тёмная тема",
   "language": "Язык",
   "loading_page": "Загрузка страницы",
   "nav_label": "Основная навигация",
@@ -381,5 +379,13 @@
   "ideas_unfollow": "Перестать следить",
   "ideas_followed": "Вы будете получать новости об этой идее.",
   "ideas_unfollowed": "Вы больше не следите за идеей.",
-  "ideas_all_boards": "Все доски"
+  "ideas_all_boards": "Все доски",
+  "theme": "Тема",
+  "theme_light": "Светлая",
+  "theme_dark": "Тёмная",
+  "theme_system": "Системная",
+  "ideas_comment_delete_confirm": "Удалить этот комментарий?",
+  "settings_avatar_remove_confirm": "Удалить аватар?",
+  "ideas_search_open": "Искать идеи",
+  "ideas_toggle_replies": "Скрыть или показать ответы"
 }

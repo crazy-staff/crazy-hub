@@ -55,7 +55,7 @@ export function ProjectPicker({
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="start" className="w-[max(var(--anchor-width),17rem)]">
         <DropdownMenu.Group>
-          <DropdownMenu.GroupLabel>{label}</DropdownMenu.GroupLabel>
+          <DropdownMenu.GroupLabel className="pb-2.5">{label}</DropdownMenu.GroupLabel>
           {projects.map((choice) => {
             const picked = choice.id === project.id
             return (

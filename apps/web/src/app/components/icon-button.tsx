@@ -1,7 +1,8 @@
 /**
  * An icon-only button with its name as `aria-label` and a tooltip (declutter rule, `docs/kickoff.md`):
  * the icon carries the meaning, the tooltip names it for sighted users, the label for screen readers.
- * `badge` puts a count in the corner (e.g. active filters).
+ * `badge` puts a count in the corner (e.g. active filters); `tone="danger"` paints a destructive
+ * action red.
  */
 import { Button, Tooltip, cn } from '@crazy-staff/ui'
 import type { ComponentProps, ReactNode } from 'react'
@@ -9,6 +10,7 @@ import type { ComponentProps, ReactNode } from 'react'
 export function IconButton({
   label,
   badge,
+  tone,
   size = 'icon',
   variant = 'ghost',
   className,
@@ -17,6 +19,8 @@ export function IconButton({
 }: Omit<ComponentProps<typeof Button>, 'size' | 'aria-label'> & {
   label: string
   badge?: ReactNode
+  /** `danger` for destructive actions (delete, remove…): always red (owner's rule, round 4). */
+  tone?: 'danger'
   size?: 'icon' | 'icon-sm'
 }) {
   return (
@@ -26,7 +30,11 @@ export function IconButton({
         size={size}
         variant={variant}
         aria-label={label}
-        className={cn('relative', className)}
+        className={cn(
+          'relative',
+          tone === 'danger' && 'text-danger hover:bg-danger/10 hover:text-danger',
+          className
+        )}
       >
         {children}
         {badge != null && badge !== 0 && <CountBadge>{badge}</CountBadge>}

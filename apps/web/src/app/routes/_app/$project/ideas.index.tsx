@@ -179,7 +179,7 @@ function Ideas() {
         />
       )}
 
-      <div className="mb-6 flex flex-col gap-3">
+      <div className="mb-8 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <ToggleGroup
             variant="ghost"
@@ -410,25 +410,53 @@ function FilterSection({
   )
 }
 
-/** Search as you type, written to the URL after a short pause. */
+/**
+ * Search as you type, written to the URL after a short pause (debounced). Closed it is an icon
+ * button like the filters (owner's note, round 4: the field took too much room); it opens into the
+ * field and folds back when it is left empty.
+ */
 function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
+  const [open, setOpen] = useState(value !== '')
+  useEffect(() => {
+    setDraft(value)
+    if (value) setOpen(true)
+  }, [value])
   useEffect(() => {
     if (draft === value) return
     const timer = setTimeout(() => onChange(draft.trim()), 300)
     return () => clearTimeout(timer)
   }, [draft, value, onChange])
+
+  if (!open) {
+    return (
+      <IconButton
+        label={m.ideas_search()}
+        variant="outline"
+        className="ms-auto"
+        onClick={() => setOpen(true)}
+      >
+        <Search />
+      </IconButton>
+    )
+  }
   return (
-    <div className="relative ms-auto w-full max-w-72">
+    <div className="relative ms-auto w-full max-w-64">
       <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
       <Input
         type="search"
+        autoFocus
         aria-label={m.ideas_search()}
         placeholder={m.ideas_search()}
         className="ps-9"
         value={draft}
         onChange={(e) => setDraft(e.currentTarget.value)}
+        onBlur={() => {
+          if (!draft.trim()) setOpen(false)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && !draft.trim()) setOpen(false)
+        }}
       />
     </div>
   )

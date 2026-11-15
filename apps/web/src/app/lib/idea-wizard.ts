@@ -58,3 +58,36 @@ export function matchTag(
   const wanted = `${norm(kind)}: ${norm(value)}`
   return tags.find((t) => norm(t.name.replace(/:\s*/, ': ')) === wanted)?.id
 }
+
+/**
+ * The fields of a text written by the wizard, read back for editing (owner's note, round 4: editing
+ * uses the same sections as the wizard). Null when the text isn't made only of these `## Heading`
+ * sections (an older or hand-written idea): it is then edited as one text.
+ */
+function splitSections<T extends string>(
+  markdown: string,
+  headings: Record<T, string>
+): Record<T, string> | null {
+  const byHeading = new Map(Object.entries(headings).map(([key, h]) => [h as string, key as T]))
+  const fields = Object.fromEntries(Object.keys(headings).map((k) => [k, ''])) as Record<T, string>
+  const parts = markdown.trim().split(/^## (.+)$/m)
+  // parts: [before, heading1, body1, heading2, body2, …]
+  if (parts[0].trim() || parts.length < 3) return null
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = byHeading.get(parts[i].trim())
+    if (!key || fields[key]) return null
+    fields[key] = (parts[i + 1] ?? '').trim()
+  }
+  return fields
+}
+
+export function splitIdea(markdown: string): IdeaFields | null {
+  return splitSections(markdown, IDEA_HEADINGS)
+}
+
+export function splitProblem(markdown: string): { fields: ProblemFields; version: string } | null {
+  const match = /\n*\*\*Trainer version:\*\* (.+)\s*$/.exec(markdown)
+  const version = match ? match[1].trim() : ''
+  const fields = splitSections(match ? markdown.slice(0, match.index) : markdown, PROBLEM_HEADINGS)
+  return fields ? { fields, version } : null
+}
