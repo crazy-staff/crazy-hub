@@ -10,6 +10,8 @@
  * - A **role** belongs to a category, has a scope (global or per project) and a set of permissions
  *   from the fixed list in code (`apps/web/src/lib/shared/crazy/permissions.ts`). An exclusive
  *   category allows one of its roles per person (counted inside a project).
+ * - `crazy_post_downvotes` holds the downvotes of ideas (#5); an idea's score is its upvotes
+ *   (Quackback's `posts.vote_count`, untouched) minus these.
  * - `crazy_discord_mfa` caches whether a user's linked Discord account has 2FA; roles that require it
  *   are suspended (not deleted) while it is missing.
  */
@@ -31,6 +33,7 @@ import { typeIdColumn, typeIdColumnNullable } from '@quackback/ids/drizzle'
 import { principal, user } from './auth'
 import { boards } from './boards'
 import { changelogEntries } from './changelog'
+import { posts } from './posts'
 
 export const CRAZY_SECTIONS = ['ideas', 'roadmap', 'changelog', 'docs', 'downloads'] as const
 export type CrazySection = (typeof CRAZY_SECTIONS)[number]
@@ -213,3 +216,24 @@ export const crazyDiscordMfa = pgTable('crazy_discord_mfa', {
   /** `account.updated_at` at check time: a newer value means a new Discord sign-in, so re-check. */
   accountUpdatedAt: timestamp('account_updated_at', { withTimezone: true }),
 })
+
+/**
+ * Downvotes of ideas (#5): one row per person and idea, signed-in people only. A downvote replaces
+ * the person's upvote (and the other way round); the score shown is upvotes minus downvotes.
+ */
+export const crazyPostDownvotes = pgTable(
+  'crazy_post_downvotes',
+  {
+    postId: typeIdColumn('post')('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    principalId: typeIdColumn('principal')('principal_id')
+      .notNull()
+      .references(() => principal.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.postId, table.principalId] }),
+    index('crazy_post_downvotes_principal_idx').on(table.principalId),
+  ]
+)

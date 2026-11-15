@@ -369,5 +369,17 @@
         "countPlural=*": "{count} ответа"
       }
     }
-  ]
+  ],
+  "ideas_downvote": "Голосовать против",
+  "ideas_undownvote": "Убрать голос против",
+  "ideas_score": "Рейтинг: {score}",
+  "ideas_react": "Добавить реакцию",
+  "ideas_follow": "Следить за идеей",
+  "ideas_following": "Вы следите за идеей",
+  "ideas_follow_all": "Вся активность",
+  "ideas_follow_status": "Только смена статуса",
+  "ideas_unfollow": "Перестать следить",
+  "ideas_followed": "Вы будете получать новости об этой идее.",
+  "ideas_unfollowed": "Вы больше не следите за идеей.",
+  "ideas_all_boards": "Все доски"
 }

@@ -367,5 +367,17 @@
         "countPlural=*": "{count} replies"
       }
     }
-  ]
+  ],
+  "ideas_downvote": "Vote against this idea",
+  "ideas_undownvote": "Remove your downvote",
+  "ideas_score": "Score: {score}",
+  "ideas_react": "Add a reaction",
+  "ideas_follow": "Follow this idea",
+  "ideas_following": "Following this idea",
+  "ideas_follow_all": "All activity",
+  "ideas_follow_status": "Status changes only",
+  "ideas_unfollow": "Stop following",
+  "ideas_followed": "You'll get updates on this idea.",
+  "ideas_unfollowed": "You stopped following this idea.",
+  "ideas_all_boards": "All boards"
 }

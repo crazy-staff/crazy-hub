@@ -5,71 +5,56 @@
  * the server-function manifest.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { BoardId, PostId } from '@quackback/ids'
-import { createPublicPostFn, toggleVoteFn } from '@/lib/server/functions/public-posts'
-import {
-  fetchVotedPosts,
-  publicPostsKeys,
-  votedPostsKeys,
-} from '@/lib/client/hooks/use-portal-posts-query'
+import { useEffect, useState } from 'react'
+import type { BoardId } from '@quackback/ids'
+import { createPublicPostFn } from '@/lib/server/functions/public-posts'
+import { publicPostsKeys } from '@/lib/client/hooks/use-portal-posts-query'
+import { getIdeaVotesFn, voteIdeaFn } from '@/lib/server/crazy/votes-functions'
+import { applyVote, ideaScore, type IdeaVote } from '@/lib/shared/crazy/votes'
 
-const voteCountKey = (postId: string) => ['voteCount', postId] as const
+/** Downvote counts and the viewer's votes of the ideas on screen (one request per list page). */
+export function useIdeaVotes(postIds: string[]) {
+  return useQuery({
+    queryKey: ['crazy', 'votes', postIds.join(',')],
+    queryFn: () => getIdeaVotesFn({ data: { postIds } }),
+    enabled: postIds.length > 0,
+    staleTime: 30 * 1000,
+  })
+}
 
-/** Optimistic upvote of one idea: count and voted state, rolled back on failure. */
-export function useIdeaVote(postId: string, voteCount: number) {
+/**
+ * Up/down vote of one idea, optimistic: the shown vote and score change at once, take the server's
+ * answer when it comes and roll back on failure. `upvotes` is Quackback's `vote_count`.
+ */
+export function useIdeaVote(postId: string, upvotes: number, downvotes: number, mine: IdeaVote) {
   const queryClient = useQueryClient()
-  const { data: count = voteCount } = useQuery({
-    queryKey: voteCountKey(postId),
-    queryFn: () => voteCount,
-    initialData: voteCount,
-    staleTime: Infinity,
-  })
-  const { data: voted } = useQuery({
-    queryKey: votedPostsKeys.byWorkspace(),
-    queryFn: fetchVotedPosts,
-    staleTime: 5 * 60 * 1000,
-  })
-  const hasVoted = voted?.has(postId) ?? false
+  const server = { vote: mine, score: ideaScore(upvotes, downvotes) }
+  const [shown, setShown] = useState(server)
+  // a refetch (or another page's vote) brings new numbers
+  useEffect(() => setShown(server), [server.vote, server.score]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const mutation = useMutation({
-    mutationFn: () => toggleVoteFn({ data: { postId: postId as PostId } }),
-    onMutate: () => {
-      const next = !hasVoted
-      queryClient.setQueryData<number>(
-        voteCountKey(postId),
-        (old) => (old ?? voteCount) + (next ? 1 : -1)
-      )
-      queryClient.setQueryData<Set<string>>(votedPostsKeys.byWorkspace(), (old) => {
-        const set = new Set(old ?? [])
-        if (next) set.add(postId)
-        else set.delete(postId)
-        return set
-      })
-      return { next }
+    mutationFn: (direction: 'up' | 'down') => voteIdeaFn({ data: { postId, direction } }),
+    onMutate: (direction) => {
+      const before = shown
+      const change = applyVote(before.vote, direction)
+      setShown({ vote: change.next, score: before.score + change.delta })
+      return { before }
     },
-    onError: (_err, _vars, context) => {
-      if (!context) return
-      queryClient.setQueryData<number>(
-        voteCountKey(postId),
-        (old) => (old ?? voteCount) + (context.next ? -1 : 1)
-      )
-      queryClient.setQueryData<Set<string>>(votedPostsKeys.byWorkspace(), (old) => {
-        const set = new Set(old ?? [])
-        if (context.next) set.delete(postId)
-        else set.add(postId)
-        return set
-      })
+    onError: (_err, _direction, context) => {
+      if (context) setShown(context.before)
     },
     onSuccess: (result) => {
-      queryClient.setQueryData<number>(voteCountKey(postId), result.voteCount)
+      setShown({ vote: result.vote, score: result.score })
+      void queryClient.invalidateQueries({ queryKey: ['crazy', 'votes'] })
     },
   })
 
   return {
-    voteCount: count,
-    hasVoted,
+    vote: shown.vote,
+    score: shown.score,
     isPending: mutation.isPending,
-    toggle: () => mutation.mutate(),
+    press: (direction: 'up' | 'down') => mutation.mutate(direction),
   }
 }
 

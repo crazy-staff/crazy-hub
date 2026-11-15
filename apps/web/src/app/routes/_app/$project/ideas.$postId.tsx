@@ -68,7 +68,10 @@ import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
 import { TagPicker } from '../../../components/ideas/tag-picker'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IconButton } from '../../../components/icon-button'
+import { FollowButton } from '../../../components/ideas/follow-button'
+import { ReactionChips, ReactionPicker, useReactions } from '../../../components/ideas/reactions'
 import { errorMessage } from '../../../lib/admin'
+import { useIdeaVotes } from '../../../lib/idea-mutations'
 import { plainText } from '../../../lib/ideas'
 
 /**
@@ -133,6 +136,7 @@ function Idea() {
   }).data
   const me = useMe()
   const act = useAct(postId)
+  const votes = useIdeaVotes([post.id]).data
   const [editing, setEditing] = useState(false)
   const status = statuses.find((s) => s.id === post.statusId)
   const mine = !!me && post.principalId === me.principalId
@@ -164,6 +168,7 @@ function Idea() {
           >
             <ArrowLeft className="size-4" /> {m.ideas_back()}
           </Link>
+          {me && <FollowButton postId={post.id} />}
           {mine && (
             <>
               <IconButton label={m.admin_edit()} onClick={() => setEditing(true)}>
@@ -248,7 +253,13 @@ function Idea() {
         )}
 
         <header className="flex items-start gap-4">
-          <VoteButton postId={post.id} voteCount={post.voteCount} size="lg" />
+          <VoteButton
+            postId={post.id}
+            voteCount={votes?.up[post.id] ?? post.voteCount}
+            downvotes={votes?.down[post.id]}
+            mine={votes?.mine[post.id] ?? null}
+            size="lg"
+          />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <h1 className="text-[1.75em] leading-tight font-semibold">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
@@ -594,6 +605,7 @@ function CommentItem({
   const threads = useContext(ThreadsContext)
   const thread = root && comment.replies?.length > 0 ? flattenThread(comment) : []
   const closed = threads.isCollapsed(comment.id)
+  const reactions = useReactions(postId, comment.id, comment.reactions ?? [])
 
   return (
     <li
@@ -684,6 +696,13 @@ function CommentItem({
         ) : (
           <RichText size="sm" json={json} text={comment.content} />
         )}
+        {!removed && !editing && (
+          <ReactionChips
+            reactions={reactions.shown}
+            canReact={canReply}
+            onToggle={(emoji) => void reactions.toggle(emoji)}
+          />
+        )}
         {((canReply && !removed && !editing) || thread.length > 0) && (
           <div className="flex items-center gap-1 -ms-2">
             {canReply && !removed && !editing && (
@@ -695,6 +714,9 @@ function CommentItem({
               >
                 <Reply /> {m.ideas_reply()}
               </Button>
+            )}
+            {canReply && !removed && !editing && (
+              <ReactionPicker onPick={(emoji) => void reactions.toggle(emoji)} />
             )}
             {thread.length > 0 && (
               <Button

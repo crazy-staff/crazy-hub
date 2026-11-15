@@ -369,5 +369,17 @@
         "countPlural=*": "{count} odpowiedzi"
       }
     }
-  ]
+  ],
+  "ideas_downvote": "Zagłosuj przeciw",
+  "ideas_undownvote": "Cofnij głos przeciw",
+  "ideas_score": "Wynik: {score}",
+  "ideas_react": "Dodaj reakcję",
+  "ideas_follow": "Obserwuj ten pomysł",
+  "ideas_following": "Obserwujesz ten pomysł",
+  "ideas_follow_all": "Cała aktywność",
+  "ideas_follow_status": "Tylko zmiany statusu",
+  "ideas_unfollow": "Przestań obserwować",
+  "ideas_followed": "Będziesz dostawać powiadomienia o tym pomyśle.",
+  "ideas_unfollowed": "Nie obserwujesz już tego pomysłu.",
+  "ideas_all_boards": "Wszystkie boardy"
 }

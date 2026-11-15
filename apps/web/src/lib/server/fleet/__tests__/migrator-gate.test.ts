@@ -386,6 +386,7 @@ describe('replayGateVerdict', () => {
       '0309_api_key_kinds',
       // crazy-hub's own migration (decision 13)
       '0310_crazy_projects_roles',
+      '0311_crazy_post_downvotes',
     ])
     const verdict = replayGateVerdict(before, verdictsFor(replaySetFor(before)), false)
     expect(verdict.ok).toBe(false)

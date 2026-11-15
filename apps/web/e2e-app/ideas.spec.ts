@@ -87,13 +87,24 @@ test('post an idea and vote on it', async ({ page }) => {
   // the structured fields are headed sections of the one text
   await expect(page.locator('article h2', { hasText: 'Why is it useful?' })).toBeVisible()
 
-  // the author's vote counts from the start; take it back and give it again
-  const vote = page.getByRole('button', { name: /vote/i }).first()
-  const before = Number(await vote.innerText())
-  await vote.click()
-  await expect(vote).not.toHaveText(String(before))
-  await vote.click()
-  await expect(vote).toHaveText(String(before))
+  // the author's upvote counts from the start; take it back, vote down (the score may go below
+  // the upvotes), switch back up
+  const score = page.getByTestId('idea-score').first()
+  const before = Number(await score.innerText())
+  await page.getByRole('button', { name: 'Remove your vote' }).click()
+  await expect(score).toHaveText(String(before - 1))
+  await page.getByRole('button', { name: 'Vote against this idea' }).click()
+  await expect(score).toHaveText(String(before - 2))
+  await expect(page.getByRole('button', { name: 'Remove your downvote' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
+  // a downvote replaces the upvote and back
+  await page.getByRole('button', { name: 'Vote for this idea' }).click()
+  await expect(score).toHaveText(String(before))
+  await page.reload()
+  await expect(page.getByTestId('idea-score').first()).toHaveText(String(before))
+  await expect(page.getByRole('button', { name: 'Remove your vote' })).toBeVisible()
 
   // it's in the list, and search finds it
   await page.getByRole('link', { name: 'All ideas' }).click()
@@ -129,6 +140,21 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await page.getByRole('textbox', { name: 'Comment' }).fill('First _comment_')
   await page.getByRole('button', { name: 'Comment', exact: true }).click()
   await expect(page.locator('ol em', { hasText: 'comment' })).toBeVisible()
+
+  // react to the comment and take the reaction back
+  await page.getByRole('button', { name: 'Add a reaction' }).first().click()
+  await page.getByRole('button', { name: '🎉' }).click()
+  await expect(page.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: '🎉 1' }).click()
+  await expect(page.getByRole('button', { name: '🎉 1' })).toBeHidden()
+
+  // the author follows their idea from the start (Quackback subscribes authors); stop and follow again
+  await page.getByRole('button', { name: 'Following this idea' }).click()
+  await page.getByRole('menuitem', { name: 'Stop following' }).click()
+  await expect(page.getByRole('button', { name: 'Follow this idea' })).toBeVisible()
+  await page.getByRole('button', { name: 'Follow this idea' }).click()
+  await page.getByRole('menuitem', { name: 'Status changes only' }).click()
+  await expect(page.getByRole('button', { name: 'Following this idea' })).toBeVisible()
 
   // reply
   await page.getByRole('button', { name: 'Reply' }).first().click()
