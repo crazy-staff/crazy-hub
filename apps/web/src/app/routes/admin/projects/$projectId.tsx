@@ -185,7 +185,7 @@ function General({ project }: { project: ProjectAdmin }) {
     )
   }
   return (
-    <Card>
+    <Card.Root className="p-6">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" key={project.id}>
         <Field label={m.admin_name()} required>
           <Input name="name" required maxLength={80} defaultValue={project.name} />
@@ -217,7 +217,7 @@ function General({ project }: { project: ProjectAdmin }) {
           <Button type="submit">{m.settings_save()}</Button>
         </div>
       </form>
-    </Card>
+    </Card.Root>
   )
 }
 

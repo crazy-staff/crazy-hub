@@ -16,7 +16,15 @@ export const CRAZY_PERMISSIONS = {
   'roles.manage': { scope: 'global' },
   /** Give and take roles (except Owner and Admin, which need `hub.owner`). */
   'roles.assign': { scope: 'global' },
-  /** Moderate ideas and comments of the project's boards. */
+  /** Change the status of the project's ideas. */
+  'ideas.status': { scope: 'project' },
+  /** Edit the tags of any idea of the project. */
+  'ideas.tags': { scope: 'project' },
+  /** Delete (and restore) ideas of the project. */
+  'ideas.delete': { scope: 'project' },
+  /** Remove and restore comments, pin the official response, lock comments. */
+  'comments.moderate': { scope: 'project' },
+  /** Legacy umbrella of the four above (seeded roles carry it); expands to them. */
   'ideas.moderate': { scope: 'project' },
   /** Build the project's roadmaps. */
   'roadmap.manage': { scope: 'project' },
@@ -38,12 +46,25 @@ export const CRAZY_PERMISSION_KEYS = Object.keys(CRAZY_PERMISSIONS) as CrazyPerm
 
 export const isCrazyPermission = (key: string): key is CrazyPermission => key in CRAZY_PERMISSIONS
 
-/** Keeps the known keys a role of this scope may carry; anything else is dropped. */
+/** What a legacy key stands for. */
+const ALIASES: Partial<Record<CrazyPermission, CrazyPermission[]>> = {
+  'ideas.moderate': ['ideas.status', 'ideas.tags', 'ideas.delete', 'comments.moderate'],
+}
+
+/** The keys an editor offers (aliases are left out: their parts are listed instead). */
+export const EDITABLE_PERMISSION_KEYS = (
+  Object.keys(CRAZY_PERMISSIONS) as CrazyPermission[]
+).filter((key) => !(key in ALIASES))
+
+/**
+ * Keeps the known keys a role of this scope may carry, with aliases expanded; anything else is
+ * dropped.
+ */
 export function sanitizePermissions(
   keys: readonly string[],
   scope: 'global' | 'project'
 ): CrazyPermission[] {
-  const known = keys.filter(isCrazyPermission)
+  const known = keys.filter(isCrazyPermission).flatMap((key) => [key, ...(ALIASES[key] ?? [])])
   const allowed =
     scope === 'global' ? known : known.filter((key) => CRAZY_PERMISSIONS[key].scope === 'project')
   return [...new Set(allowed)]

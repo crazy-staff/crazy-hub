@@ -53,6 +53,10 @@ describe('sanitizePermissions', () => {
   it('drops unknown keys and hub-wide keys from project roles', () => {
     expect(sanitizePermissions(['ideas.moderate', 'nope', 'projects.manage'], 'project')).toEqual([
       'ideas.moderate',
+      'ideas.status',
+      'ideas.tags',
+      'ideas.delete',
+      'comments.moderate',
     ])
     expect(sanitizePermissions(['projects.manage', 'projects.manage'], 'global')).toEqual([
       'projects.manage',
@@ -74,7 +78,13 @@ describe('effectivePermissions', () => {
   const assignments = [holds(moderator, 'trainer'), holds(editor, 'other')]
 
   it('gives project roles only in their project', () => {
-    expect([...effectivePermissions(assignments, 'ok', 'trainer')]).toEqual(['ideas.moderate'])
+    expect([...effectivePermissions(assignments, 'ok', 'trainer')]).toEqual([
+      'ideas.moderate',
+      'ideas.status',
+      'ideas.tags',
+      'ideas.delete',
+      'comments.moderate',
+    ])
     expect([...effectivePermissions(assignments, 'ok', 'other')]).toEqual(['docs.edit'])
     expect([...effectivePermissions(assignments, 'ok', null)]).toEqual([])
   })
