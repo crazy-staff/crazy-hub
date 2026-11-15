@@ -385,5 +385,9 @@
   "ideas_comment_delete_confirm": "Delete this comment?",
   "settings_avatar_remove_confirm": "Remove your avatar?",
   "ideas_search_open": "Search ideas",
-  "ideas_toggle_replies": "Hide or show the replies"
+  "ideas_toggle_replies": "Hide or show the replies",
+  "project_new_board": "New board",
+  "project_board_name": "Name",
+  "project_board_description": "Description",
+  "project_board_created": "Board created and added to the project."
 }

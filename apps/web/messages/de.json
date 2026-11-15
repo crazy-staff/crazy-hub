@@ -385,5 +385,9 @@
   "ideas_comment_delete_confirm": "Diesen Kommentar löschen?",
   "settings_avatar_remove_confirm": "Avatar entfernen?",
   "ideas_search_open": "Ideen suchen",
-  "ideas_toggle_replies": "Antworten aus- oder einblenden"
+  "ideas_toggle_replies": "Antworten aus- oder einblenden",
+  "project_new_board": "Neues Board",
+  "project_board_name": "Name",
+  "project_board_description": "Beschreibung",
+  "project_board_created": "Board erstellt und dem Projekt hinzugefügt."
 }

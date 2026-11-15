@@ -102,6 +102,20 @@ export const setProjectBoardsFn = createServerFn({ method: 'POST' })
     await setProjectBoards(data.projectId, [...new Set(data.boardIds)])
   })
 
+export const createProjectBoardFn = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      projectId: id,
+      name: z.string().trim().min(1).max(100),
+      description: z.string().max(500).default(''),
+    })
+  )
+  .handler(async ({ data }) => {
+    await guard('projects.manage')
+    const { createProjectBoard } = await import('./admin.service')
+    return createProjectBoard(data.projectId, data)
+  })
+
 // ---------------------------------------------------------------------------------- dimensions
 
 export const saveDimensionFn = createServerFn({ method: 'POST' })

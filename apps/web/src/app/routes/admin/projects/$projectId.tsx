@@ -9,6 +9,7 @@ import {
   Select,
   Switch,
   Tabs,
+  Textarea,
   toast,
 } from '@crazy-staff/ui'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
@@ -23,6 +24,7 @@ import {
   saveDimensionFn,
   saveDimensionValueFn,
   setProjectBoardsFn,
+  createProjectBoardFn,
   updateProjectFn,
 } from '@/lib/server/crazy/admin-functions'
 import { SECTION_IDS } from '@/lib/shared/crazy/projects'
@@ -258,12 +260,15 @@ function Sections({ project }: { project: ProjectAdmin }) {
 function Boards({ project, data }: { project: ProjectAdmin; data: ProjectsAdmin }) {
   const act = useAction()
   const [picked, setPicked] = useState<string[]>(project.boardIds)
+  const [creating, setCreating] = useState(false)
   const projectName = (id: string | null) => data.projects.find((p) => p.id === id)?.name
-  if (data.boards.length === 0) {
-    return <Card description={m.project_no_boards()} />
-  }
+  const newBoard = (
+    <Button variant="outline" onClick={() => setCreating(true)}>
+      <Plus /> {m.project_new_board()}
+    </Button>
+  )
   return (
-    <Card description={m.project_boards_help()}>
+    <Card description={data.boards.length ? m.project_boards_help() : m.project_no_boards()}>
       <div className="flex flex-col gap-3">
         {data.boards.map((board) => {
           const elsewhere =
@@ -284,20 +289,82 @@ function Boards({ project, data }: { project: ProjectAdmin; data: ProjectsAdmin 
             />
           )
         })}
-        <div>
-          <Button
-            onClick={() =>
-              act(
-                () => setProjectBoardsFn({ data: { projectId: project.id, boardIds: picked } }),
-                m.settings_saved()
-              )
-            }
-          >
-            {m.settings_save()}
-          </Button>
+        <div className="mt-2 flex gap-2">
+          {data.boards.length > 0 && (
+            <Button
+              onClick={() =>
+                act(
+                  () => setProjectBoardsFn({ data: { projectId: project.id, boardIds: picked } }),
+                  m.settings_saved()
+                )
+              }
+            >
+              {m.settings_save()}
+            </Button>
+          )}
+          {newBoard}
         </div>
       </div>
+      {creating && (
+        <NewBoardDialog
+          projectId={project.id}
+          onClose={() => setCreating(false)}
+          onCreated={(boardId) => setPicked((list) => [...list, boardId])}
+        />
+      )}
     </Card>
+  )
+}
+
+/** A new board, created and linked to this project at once. */
+function NewBoardDialog({
+  projectId,
+  onClose,
+  onCreated,
+}: {
+  projectId: string
+  onClose: () => void
+  onCreated: (boardId: string) => void
+}) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  return (
+    <FormDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title={m.project_new_board()}
+      submitLabel={m.project_new_board()}
+      dirty={name !== '' || description !== ''}
+      onSubmit={async () => {
+        const board = await createProjectBoardFn({ data: { projectId, name, description } })
+        onCreated(board.id)
+        await queryClient.invalidateQueries({ queryKey: ['crazy'] })
+        await router.invalidate()
+        toast.success(m.project_board_created())
+      }}
+    >
+      <Field label={m.project_board_name()} required>
+        <Input
+          required
+          autoFocus
+          maxLength={100}
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+        />
+      </Field>
+      <Field label={m.project_board_description()} description={m.wizard_optional()}>
+        <Textarea
+          rows={3}
+          maxLength={500}
+          value={description}
+          onChange={(e) => setDescription(e.currentTarget.value)}
+        />
+      </Field>
+    </FormDialog>
   )
 }
 

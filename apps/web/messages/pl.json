@@ -387,5 +387,9 @@
   "ideas_comment_delete_confirm": "Usunąć ten komentarz?",
   "settings_avatar_remove_confirm": "Usunąć avatar?",
   "ideas_search_open": "Szukaj pomysłów",
-  "ideas_toggle_replies": "Ukryj lub pokaż odpowiedzi"
+  "ideas_toggle_replies": "Ukryj lub pokaż odpowiedzi",
+  "project_new_board": "Nowy board",
+  "project_board_name": "Nazwa",
+  "project_board_description": "Opis",
+  "project_board_created": "Board utworzony i dodany do projektu."
 }
