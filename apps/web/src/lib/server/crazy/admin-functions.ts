@@ -21,6 +21,12 @@ const short = z.string().trim().max(3)
 const description = z.string().trim().max(200)
 const id = z.string().uuid()
 const direction = z.union([z.literal(-1), z.literal(1)])
+/** One step (`direction`, the arrow buttons) or straight to an index (`to`, drag and drop). */
+const move = z
+  .object({ id, direction: direction.optional(), to: z.number().int().min(0).max(1000).optional() })
+  .refine((m) => (m.direction === undefined) !== (m.to === undefined))
+const moveOf = (data: { direction?: -1 | 1; to?: number }) =>
+  data.to !== undefined ? { to: data.to } : (data.direction ?? 1)
 
 async function guard(permission: 'projects.manage' | 'roles.manage' | 'roles.assign') {
   const { requireProjectPermission } = await import('./roles.service')
@@ -87,11 +93,11 @@ export const updateProjectFn = createServerFn({ method: 'POST' })
   })
 
 export const moveProjectFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id, direction }))
+  .validator(move)
   .handler(async ({ data }) => {
     await guard('projects.manage')
     const { moveProject } = await import('./admin.service')
-    await moveProject(data.id, data.direction)
+    await moveProject(data.id, moveOf(data))
   })
 
 export const setProjectBoardsFn = createServerFn({ method: 'POST' })
@@ -144,11 +150,11 @@ export const deleteDimensionFn = createServerFn({ method: 'POST' })
   })
 
 export const moveDimensionFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id, direction }))
+  .validator(move)
   .handler(async ({ data }) => {
     await guard('projects.manage')
     const { moveDimension } = await import('./admin.service')
-    await moveDimension(data.id, data.direction)
+    await moveDimension(data.id, moveOf(data))
   })
 
 export const saveDimensionValueFn = createServerFn({ method: 'POST' })
@@ -178,11 +184,11 @@ export const deleteDimensionValueFn = createServerFn({ method: 'POST' })
   })
 
 export const moveDimensionValueFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id, direction }))
+  .validator(move)
   .handler(async ({ data }) => {
     await guard('projects.manage')
     const { moveDimensionValue } = await import('./admin.service')
-    await moveDimensionValue(data.id, data.direction)
+    await moveDimensionValue(data.id, moveOf(data))
   })
 
 // ------------------------------------------------------------------------------------- roles

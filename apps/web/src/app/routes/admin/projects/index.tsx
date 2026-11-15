@@ -6,7 +6,8 @@ import { useState } from 'react'
 import { createProjectFn, moveProjectFn } from '@/lib/server/crazy/admin-functions'
 import { m } from '../../../paraglide/messages.js'
 import { Page } from '../../../components/page'
-import { Badge, FormDialog, RowActions, text } from '../../../components/admin/parts'
+import { Badge, FormDialog, text } from '../../../components/admin/parts'
+import { SortableList } from '../../../components/admin/sortable'
 import { adminQueries, slugify } from '../../../lib/admin'
 
 /** Every project of the hub, in nav order (decision 13). */
@@ -37,35 +38,37 @@ function Projects() {
         </Button>
       }
     >
-      <Card.Root className="divide-y divide-border">
-        {data.projects.map((project, index) => (
-          <div key={project.id} className="flex items-center gap-3 px-4 py-3">
-            <Badge text={project.short} muted={project.archived} />
-            <Link
-              to="/admin/projects/$projectId"
-              params={{ projectId: project.id }}
-              className="flex min-w-0 flex-1 flex-col rounded-control-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <span className="truncate">{project.name}</span>
-                {project.archived && (
-                  <Chip size="sm" variant="neutral">
-                    {m.project_archived()}
-                  </Chip>
-                )}
-              </span>
-              <span className="truncate text-sm text-muted">/{project.slug}</span>
-            </Link>
-            <RowActions
-              first={index === 0}
-              last={index === data.projects.length - 1}
-              onMove={async (direction) => {
-                await moveProjectFn({ data: { id: project.id, direction } })
-                await refresh()
-              }}
-            />
-          </div>
-        ))}
+      <Card.Root>
+        <SortableList
+          items={data.projects}
+          className="flex flex-col divide-y divide-border"
+          onMove={async (id, to) => {
+            await moveProjectFn({ data: { id, to } })
+            await refresh()
+          }}
+        >
+          {(project, handle) => (
+            <div className="flex items-center gap-2 bg-surface py-3 ps-2 pe-4">
+              {handle}
+              <Badge text={project.short} muted={project.archived} />
+              <Link
+                to="/admin/projects/$projectId"
+                params={{ projectId: project.id }}
+                className="flex min-w-0 flex-1 flex-col rounded-control-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <span className="truncate">{project.name}</span>
+                  {project.archived && (
+                    <Chip size="sm" variant="neutral">
+                      {m.project_archived()}
+                    </Chip>
+                  )}
+                </span>
+                <span className="truncate text-sm text-muted">/{project.slug}</span>
+              </Link>
+            </div>
+          )}
+        </SortableList>
       </Card.Root>
       <NewProjectDialog open={creating} onOpenChange={setCreating} onCreated={refresh} />
     </Page>

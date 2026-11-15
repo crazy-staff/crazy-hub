@@ -30,6 +30,7 @@ import { m } from '../../../paraglide/messages.js'
 import { Page } from '../../../components/page'
 import { Badge, FormDialog, RowActions, text } from '../../../components/admin/parts'
 import { NewBoardDialog } from '../../../components/admin/new-board-dialog'
+import { SortableList } from '../../../components/admin/sortable'
 import {
   adminQueries,
   errorMessage,
@@ -334,77 +335,81 @@ function Dimensions({ project }: { project: ProjectAdmin }) {
       {project.dimensions.length === 0 && (
         <p className="text-sm text-muted">{m.dimension_empty()}</p>
       )}
-      {project.dimensions.map((dimension, index) => (
-        <Card.Root key={dimension.id} className="flex flex-col">
-          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="truncate font-semibold">{dimension.name}</span>
-              <Chip size="sm" variant="outline">
-                {dimension.slug}
-              </Chip>
-              <Chip size="sm" variant={dimension.usedInDocs ? 'soft' : 'neutral'}>
-                {dimension.usedInDocs ? m.dimension_docs() : m.dimension_tag_only()}
-              </Chip>
-            </span>
-            <RowActions
-              first={index === 0}
-              last={index === project.dimensions.length - 1}
-              onMove={(direction) =>
-                act(() => moveDimensionFn({ data: { id: dimension.id, direction } }))
-              }
-              onEdit={() => setEditing({ kind: 'dimension', dimension })}
-              onDelete={() => act(() => deleteDimensionFn({ data: { id: dimension.id } }))}
-              deleteTitle={m.dimension_delete_confirm()}
-            />
-          </div>
-          <div className="flex flex-col divide-y divide-border">
-            {dimension.values.map((value, i) => (
-              <div key={value.id} className="flex items-center gap-3 px-4 py-2.5">
-                <Badge text={value.short} muted={value.status !== 'available'} />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <span className="truncate">{value.label}</span>
-                    {dimension.defaultValue === value.slug && (
-                      <Star
-                        aria-label={m.value_default()}
-                        className="size-3.5 shrink-0 fill-current text-accent"
-                      />
-                    )}
-                    {value.status !== 'available' && (
-                      <Chip size="sm" variant="neutral">
-                        {STATUS_LABEL[value.status]()}
-                      </Chip>
-                    )}
-                  </span>
-                  <span className="truncate text-xs text-muted">
-                    {value.slug}
-                    {value.description && ` · ${value.description}`}
-                  </span>
-                </span>
-                <RowActions
-                  first={i === 0}
-                  last={i === dimension.values.length - 1}
-                  onMove={(direction) =>
-                    act(() => moveDimensionValueFn({ data: { id: value.id, direction } }))
-                  }
-                  onEdit={() => setEditing({ kind: 'value', dimension, value })}
-                  onDelete={() => act(() => deleteDimensionValueFn({ data: { id: value.id } }))}
-                  deleteTitle={m.value_delete_confirm()}
-                />
-              </div>
-            ))}
-            <div className="px-4 py-2.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditing({ kind: 'value', dimension })}
-              >
-                <Plus /> {m.value_new()}
-              </Button>
+      <SortableList
+        items={project.dimensions}
+        className="flex flex-col gap-4"
+        onMove={(id, to) => act(() => moveDimensionFn({ data: { id, to } }))}
+      >
+        {(dimension, handle) => (
+          <Card.Root className="flex flex-col">
+            <div className="flex items-center gap-2 border-b border-border py-3 ps-2 pe-4">
+              {handle}
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="truncate font-semibold">{dimension.name}</span>
+                <Chip size="sm" variant="outline">
+                  {dimension.slug}
+                </Chip>
+                <Chip size="sm" variant={dimension.usedInDocs ? 'soft' : 'neutral'}>
+                  {dimension.usedInDocs ? m.dimension_docs() : m.dimension_tag_only()}
+                </Chip>
+              </span>
+              <RowActions
+                onEdit={() => setEditing({ kind: 'dimension', dimension })}
+                onDelete={() => act(() => deleteDimensionFn({ data: { id: dimension.id } }))}
+                deleteTitle={m.dimension_delete_confirm()}
+              />
             </div>
-          </div>
-        </Card.Root>
-      ))}
+            <div className="flex flex-col divide-y divide-border">
+              <SortableList
+                items={dimension.values}
+                className="flex flex-col divide-y divide-border"
+                onMove={(id, to) => act(() => moveDimensionValueFn({ data: { id, to } }))}
+              >
+                {(value, valueHandle) => (
+                  <div className="flex items-center gap-2 bg-surface py-2.5 ps-2 pe-4">
+                    {valueHandle}
+                    <Badge text={value.short} muted={value.status !== 'available'} />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <span className="truncate">{value.label}</span>
+                        {dimension.defaultValue === value.slug && (
+                          <Star
+                            aria-label={m.value_default()}
+                            className="size-3.5 shrink-0 fill-current text-accent"
+                          />
+                        )}
+                        {value.status !== 'available' && (
+                          <Chip size="sm" variant="neutral">
+                            {STATUS_LABEL[value.status]()}
+                          </Chip>
+                        )}
+                      </span>
+                      <span className="truncate text-xs text-muted">
+                        {value.slug}
+                        {value.description && ` · ${value.description}`}
+                      </span>
+                    </span>
+                    <RowActions
+                      onEdit={() => setEditing({ kind: 'value', dimension, value })}
+                      onDelete={() => act(() => deleteDimensionValueFn({ data: { id: value.id } }))}
+                      deleteTitle={m.value_delete_confirm()}
+                    />
+                  </div>
+                )}
+              </SortableList>
+              <div className="px-4 py-2.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing({ kind: 'value', dimension })}
+                >
+                  <Plus /> {m.value_new()}
+                </Button>
+              </div>
+            </div>
+          </Card.Root>
+        )}
+      </SortableList>
       {editing?.kind === 'dimension' && (
         <DimensionDialog
           key={editing.dimension?.id ?? 'new'}

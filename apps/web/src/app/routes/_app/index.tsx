@@ -15,7 +15,7 @@ function Home() {
   return (
     <Page title="crazy-hub" description={m.page_home_description()}>
       {/* link cards as in the crazy-ui docs */}
-      <Reveal.Group className="grid gap-3 sm:grid-cols-2" stagger={0.04}>
+      <Reveal.Group className="grid gap-3 @3xl:grid-cols-2" stagger={0.04}>
         {projects.map((project) => (
           <Reveal.Item key={project.id}>
             <Link

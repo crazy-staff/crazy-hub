@@ -1,7 +1,7 @@
 import { Avatar, Button, Card, Chip, Empty } from '@crazy-staff/ui'
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { Lightbulb, MessageSquare, Reply, UserRound, type LucideIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getPublicUserProfileFn } from '@/lib/server/functions/public-profile'
 import { getProfileActivityFn } from '@/lib/server/crazy/profile-functions'
 import type { ProfileActivityItem } from '@/lib/server/crazy/profile-activity.service'
@@ -15,14 +15,33 @@ import { Page } from '../../components/page'
  * and replies with an excerpt, newest first), so anyone can read what they wrote before.
  */
 export const Route = createFileRoute('/_app/u/$principalId')({
-  loader: async ({ params }) => {
+  loader: async ({ params, context }) => {
     const [profile, activity] = await Promise.all([
       getPublicUserProfileFn({ data: { principalId: params.principalId } }).catch(() => null),
       getProfileActivityFn({ data: { principalId: params.principalId } }).catch(() => null),
     ])
+    const empty = { commentCount: 0, items: [], next: null }
+    // Quackback hides a profile without any activity; your own opens anyway (from the account menu)
+    const user = context.session?.user
+    if (!profile && user && context.hub.me?.principalId === params.principalId) {
+      return {
+        principalId: params.principalId,
+        displayName: user.name || user.email,
+        avatarUrl: user.image ?? null,
+        isTeamMember: false,
+        joinedAt: new Date(user.createdAt ?? Date.now()).toISOString(),
+        postCount: 0,
+        commentCount: 0,
+        voteCount: 0,
+        activity: activity ?? empty,
+      }
+    }
     if (!profile) throw notFound()
-    return { ...profile, activity: activity ?? { commentCount: 0, items: [], next: null } }
+    return { ...profile, activity: activity ?? empty }
   },
+  // a hover on an author's name preloads the profile; opening it still shows what they wrote since
+  staleTime: 0,
+  preloadStaleTime: 0,
   head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.displayName ?? ''} · crazy-hub` }] }),
   component: PublicProfile,
 })
@@ -76,6 +95,11 @@ function PublicProfile() {
   const p = Route.useLoaderData()
   const [items, setItems] = useState(p.activity.items)
   const [next, setNext] = useState(p.activity.next)
+  // the loader refreshes (another profile, or newer data after a preload): start from its page
+  useEffect(() => {
+    setItems(p.activity.items)
+    setNext(p.activity.next)
+  }, [p.activity])
   const [loading, setLoading] = useState(false)
   const more = async () => {
     if (!next) return

@@ -3,10 +3,10 @@
  * idea, quick admin actions on the ideas list, … It adds to the page's own controls, never replaces
  * them. It sits in the page's right column (`PageFrame`'s `toc`) and can be hidden (remembered per
  * panel in this browser); hidden, a small button in the same place brings it back. Where the right
- * column folds away (narrow panel, `useWideLayout` false), `SidePanelInline` shows the content
- * folded at the top of the page instead; it is rendered in one place only.
+ * column folds away (narrow panel, `useWideLayout` false), `SidePanelDrawer` opens the content in a
+ * bottom drawer instead; it is rendered in one place only.
  */
-import { Collapsible, cn } from '@crazy-staff/ui'
+import { Drawer, cn } from '@crazy-staff/ui'
 import { PanelRightClose, PanelRightOpen, type LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -152,14 +152,41 @@ export function SidePanelSection({
   )
 }
 
-/** The panel's content at the top of the page, folded, for when the right column is hidden. */
-export function SidePanelInline({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * The panel on a narrow screen (owner's note, round 6): an icon button among the page's own controls
+ * that opens the same content in a drawer from the bottom, swiped down to close.
+ */
+export function SidePanelDrawer({
+  title,
+  icon: Icon,
+  variant = 'ghost',
+  children,
+}: {
+  title: string
+  icon: LucideIcon
+  variant?: 'ghost' | 'outline'
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
   return (
-    <Collapsible.Root className="squircle rounded-card border border-border bg-surface">
-      <Collapsible.Trigger className="w-full justify-start px-4 py-3">{title}</Collapsible.Trigger>
-      <Collapsible.Panel>
-        <div className="flex flex-col gap-5 px-4 pb-4">{children}</div>
-      </Collapsible.Panel>
-    </Collapsible.Root>
+    <>
+      <IconButton label={title} variant={variant} onClick={() => setOpen(true)}>
+        <Icon />
+      </IconButton>
+      <Drawer.Root open={open} onOpenChange={setOpen}>
+        <Drawer.Content>
+          <Drawer.Title>{title}</Drawer.Title>
+          <Drawer.Body>
+            <section
+              aria-label={title}
+              // the title already separates: no line above the first block
+              className="flex flex-col gap-5 pt-2 pb-4 [&>[role=group]:first-child]:border-t-0 [&>[role=group]:first-child]:pt-0"
+            >
+              {children}
+            </section>
+          </Drawer.Body>
+        </Drawer.Content>
+      </Drawer.Root>
+    </>
   )
 }

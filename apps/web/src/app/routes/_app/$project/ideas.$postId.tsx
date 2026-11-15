@@ -11,7 +11,7 @@ import {
 } from '@crazy-staff/ui'
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Pencil, PinOff, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, PinOff, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { PostId } from '@quackback/ids'
 import { portalDetailQueries } from '@/lib/client/queries/portal-detail'
@@ -38,7 +38,7 @@ import { FollowButton } from '../../../components/ideas/follow-button'
 import { Comments } from '../../../components/ideas/comments'
 import { TagsDialog } from '../../../components/ideas/tags-dialog'
 import { ModerationPanelContent } from '../../../components/ideas/moderation-panel'
-import { SidePanel, SidePanelInline, useWideLayout } from '../../../components/side-panel'
+import { SidePanel, SidePanelDrawer, useWideLayout } from '../../../components/side-panel'
 import { errorMessage } from '../../../lib/admin'
 import { formatDate, useAct, useMe } from '../../../lib/idea-act'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
@@ -133,7 +133,6 @@ function Idea() {
       }
     >
       <article className="flex flex-col gap-8">
-        {!wide && panel && <SidePanelInline title={m.ideas_moderation()}>{panel}</SidePanelInline>}
         <div className="flex items-center gap-2">
           <Link
             to="/$project/ideas"
@@ -143,6 +142,11 @@ function Idea() {
             <ArrowLeft className="size-4" /> {m.ideas_back()}
           </Link>
           {me && <FollowButton postId={post.id} />}
+          {!wide && panel && (
+            <SidePanelDrawer title={m.ideas_moderation()} icon={ShieldCheck}>
+              {panel}
+            </SidePanelDrawer>
+          )}
           {/* the author's and the moderators' own buttons stay here; the panel only adds to them */}
           {(mine || can?.delete) && (
             <>

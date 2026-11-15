@@ -1,10 +1,11 @@
 import { Avatar, Button, DropdownMenu } from '@crazy-staff/ui'
 import { Link, useRouter } from '@tanstack/react-router'
-import { LayoutDashboard, LogIn, LogOut, Settings } from 'lucide-react'
+import { LayoutDashboard, LogIn, LogOut, Settings, UserRound } from 'lucide-react'
 import { signOut } from '@/lib/client/auth-client'
 import { useSessionContext, useUserRole } from '@/lib/client/hooks/use-root-context'
 import { isTeamMember } from '@/lib/shared/roles'
 import { openSignIn } from './auth/auth-dialog'
+import { useMe } from '../lib/idea-act'
 import { m } from '../paraglide/messages.js'
 
 /**
@@ -16,6 +17,7 @@ export function AccountMenu() {
   const role = useUserRole()
   const router = useRouter()
   const user = session?.user
+  const me = useMe()
 
   if (!user) {
     return (
@@ -34,7 +36,13 @@ export function AccountMenu() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         render={
-          <Button variant="ghost" size="sm" className="gap-2 ps-1" aria-label={m.account_menu()} />
+          <Button
+            variant="ghost"
+            size="sm"
+            // on a phone only the avatar shows: a square button around it
+            className="gap-2 ps-1 max-sm:size-8 max-sm:justify-center max-sm:p-0"
+            aria-label={m.account_menu()}
+          />
         }
       >
         <Avatar
@@ -46,10 +54,24 @@ export function AccountMenu() {
         <span className="max-w-40 truncate max-sm:hidden">{user.name || user.email}</span>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end" className="min-w-56">
-        <div className="px-2.5 py-2">
-          <div className="truncate text-sm font-medium">{user.name}</div>
-          <div className="truncate text-xs text-muted">{user.email}</div>
+        <div className="flex items-center gap-3 px-2.5 pt-2 pb-3">
+          <Avatar size="sm" src={user.image ?? undefined} name={user.name || user.email} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">{user.name}</div>
+            <div className="truncate text-xs text-muted">{user.email}</div>
+          </div>
         </div>
+        <DropdownMenu.Separator />
+        {me && (
+          <DropdownMenu.Item
+            render={<Link to="/u/$principalId" params={{ principalId: me.principalId }} />}
+          >
+            <UserRound /> {m.profile_mine()}
+          </DropdownMenu.Item>
+        )}
+        <DropdownMenu.Item render={<Link to="/settings/profile" />}>
+          <Settings /> {m.settings_title()}
+        </DropdownMenu.Item>
         {isTeamMember(role) && (
           <>
             <DropdownMenu.Separator />
@@ -58,10 +80,6 @@ export function AccountMenu() {
             </DropdownMenu.Item>
           </>
         )}
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item render={<Link to="/settings/profile" />}>
-          <Settings /> {m.settings_title()}
-        </DropdownMenu.Item>
         <DropdownMenu.Separator />
         <DropdownMenu.Item
           danger
