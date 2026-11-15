@@ -746,7 +746,7 @@ function CommentItem({
           {closed && (
             <span
               aria-hidden
-              className="pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-2.5 w-[calc(1.75rem+1px)] rounded-es-lg border-s-2 border-b-2 border-border"
+              className="pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-2.5 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2 border-border"
             />
           )}
         </>
