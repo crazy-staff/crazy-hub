@@ -336,5 +336,36 @@
   "wizard_next": "Next",
   "wizard_report": "Report",
   "error_idea_has_engagement": "Others have already voted or commented, so the idea stays. Ask a moderator to remove it.",
-  "wizard_choose": "Choose…"
+  "wizard_choose": "Choose…",
+  "wizard_required": "Fill this in to continue.",
+  "wizard_optional": "Optional.",
+  "wizard_board_hint": "Where the idea is posted.",
+  "wizard_dimension_hint": "Where the problem happens.",
+  "wizard_title_hint": "A short line others will recognise in the list.",
+  "wizard_idea_what": "What should it do?",
+  "wizard_idea_what_placeholder": "A map of the colony with the teleport points…",
+  "wizard_idea_what_hint": "The feature in one or two sentences.",
+  "wizard_idea_how": "How should it work?",
+  "wizard_idea_how_hint": "The flow, the controls, an example. Optional.",
+  "wizard_idea_why": "Why is it useful?",
+  "wizard_idea_why_hint": "Who gains what. Optional.",
+  "wizard_review_hint": "This is how it will look. You can still edit it afterwards.",
+  "wizard_edit_step": "Edit: {step}",
+  "ideas_filters_active": "Filters ({count} active)",
+  "ideas_filter_search": "Search…",
+  "ideas_filter_nothing": "Nothing matches.",
+  "ideas_filter_remove": "Remove filter: {name}",
+  "ideas_clear_all": "Clear all",
+  "ideas_reply_to": "Replying to {name}",
+  "ideas_hide_replies": "Hide replies",
+  "ideas_replies_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} reply",
+        "countPlural=*": "{count} replies"
+      }
+    }
+  ]
 }

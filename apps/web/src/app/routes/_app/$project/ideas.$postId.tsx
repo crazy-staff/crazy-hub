@@ -9,6 +9,7 @@ import {
   Field,
   Input,
   Select,
+  cn,
   toast,
 } from '@crazy-staff/ui'
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
@@ -21,6 +22,8 @@ import {
 } from '@tanstack/react-router'
 import {
   ArrowLeft,
+  ChevronRight,
+  CornerUpLeft,
   EyeOff,
   Lock,
   LockOpen,
@@ -33,7 +36,7 @@ import {
   Tags,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import type { PostCommentId, PostId } from '@quackback/ids'
 import { portalDetailQueries, type PublicCommentView } from '@/lib/client/queries/portal-detail'
 import { portalQueries } from '@/lib/client/queries/portal'
@@ -64,7 +67,9 @@ import { RichText } from '../../../components/ideas/rich-text'
 import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
 import { TagPicker } from '../../../components/ideas/tag-picker'
 import { openSignIn } from '../../../components/auth/auth-dialog'
+import { IconButton } from '../../../components/icon-button'
 import { errorMessage } from '../../../lib/admin'
+import { plainText } from '../../../lib/ideas'
 
 /**
  * One idea (#5): vote, title, status, tags, author, the formatted text, the official response, a
@@ -79,7 +84,8 @@ export const Route = createFileRoute('/_app/$project/ideas/$postId')({
       .ensureQueryData(portalDetailQueries.postDetail(params.postId as PostId))
       .catch(() => null)
     if (!post || !context.project.boards.some((b) => b.id === post.board.id)) throw notFound()
-    void context.queryClient.prefetchQuery(portalQueries.statuses())
+    // awaited: the status chip is rendered on the server too (no hydration mismatch)
+    await context.queryClient.ensureQueryData(portalQueries.statuses())
     return { title: post.title }
   },
   head: ({ loaderData, match }) => ({
@@ -149,7 +155,7 @@ function Idea() {
 
   return (
     <PageFrame>
-      <article className="flex flex-col gap-6">
+      <article className="flex flex-col gap-8">
         <div className="flex items-center gap-2">
           <Link
             to="/$project/ideas"
@@ -160,14 +166,14 @@ function Idea() {
           </Link>
           {mine && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                <Pencil /> {m.admin_edit()}
-              </Button>
+              <IconButton label={m.admin_edit()} onClick={() => setEditing(true)}>
+                <Pencil />
+              </IconButton>
               <AlertDialog
                 trigger={
-                  <Button variant="ghost" size="sm">
-                    <Trash2 /> {m.admin_delete()}
-                  </Button>
+                  <IconButton label={m.admin_delete()}>
+                    <Trash2 />
+                  </IconButton>
                 }
                 title={m.ideas_delete_confirm()}
                 cancelLabel={m.admin_cancel()}
@@ -437,44 +443,70 @@ function Comments({
   const me = useMe()
   const navigate = useNavigate()
   const visible = comments.filter((c) => c.id !== pinnedId)
+  const total = countComments(visible)
+  // collapsed threads, remembered while the page is open (refetches keep them)
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
+  const threads = {
+    isCollapsed: (id: string) => collapsed.has(id),
+    set: (id: string, closed: boolean) =>
+      setCollapsed((all) => {
+        const next = new Set(all)
+        if (closed) next.add(id)
+        else next.delete(id)
+        return next
+      }),
+  }
 
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">{m.ideas_comments()}</h2>
-      {locked ? (
-        <p className="flex items-center gap-2 text-sm text-muted">
-          <Lock className="size-4" /> {m.ideas_comments_locked()}
-        </p>
-      ) : !me ? (
-        <Button
-          variant="outline"
-          className="w-fit"
-          onClick={() => void navigate({ to: '.', search: openSignIn })}
-        >
-          {m.ideas_sign_in_to_comment()}
-        </Button>
-      ) : canComment ? (
-        <CommentComposer postId={postId} />
-      ) : null}
-      {visible.length === 0 ? (
-        <p className="text-sm text-muted">{m.ideas_no_comments()}</p>
-      ) : (
-        <ol className="flex flex-col gap-5">
-          {visible.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              postId={postId}
-              comment={comment}
-              canReply={canComment && !locked && !!me}
-              moderator={moderator}
-              root
-            />
-          ))}
-        </ol>
-      )}
-    </section>
+    <ThreadsContext value={threads}>
+      <section className="mt-2 flex flex-col gap-6 border-t border-border pt-8">
+        <h2 className="text-lg font-semibold">
+          {m.ideas_comments()}
+          {total > 0 && (
+            <span className="ms-2 text-sm font-normal text-muted tabular-nums">{total}</span>
+          )}
+        </h2>
+        {locked ? (
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Lock className="size-4" /> {m.ideas_comments_locked()}
+          </p>
+        ) : !me ? (
+          <Button
+            variant="outline"
+            className="w-fit"
+            onClick={() => void navigate({ to: '.', search: openSignIn })}
+          >
+            {m.ideas_sign_in_to_comment()}
+          </Button>
+        ) : canComment ? (
+          <CommentComposer postId={postId} />
+        ) : null}
+        {visible.length === 0 ? (
+          <p className="text-sm text-muted">{m.ideas_no_comments()}</p>
+        ) : (
+          <ol className="mt-2 flex flex-col gap-8">
+            {visible.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                postId={postId}
+                comment={comment}
+                canReply={canComment && !locked && !!me}
+                moderator={moderator}
+                root
+              />
+            ))}
+          </ol>
+        )}
+      </section>
+    </ThreadsContext>
   )
 }
+
+/** Which threads are collapsed (kept by `Comments`, so it survives refetches while on the page). */
+const ThreadsContext = createContext<{
+  isCollapsed: (id: string) => boolean
+  set: (id: string, collapsed: boolean) => void
+}>({ isCollapsed: () => false, set: () => {} })
 
 function CommentComposer({
   postId,
@@ -512,7 +544,7 @@ function CommentComposer({
     }
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <MarkdownEditor
         label={m.ideas_comment()}
         placeholder={m.ideas_comment_placeholder()}
@@ -522,15 +554,15 @@ function CommentComposer({
         onChange={setDraft}
         autoFocus={autoFocus}
       />
-      <div className="flex gap-2">
-        <Button size="sm" disabled={!draft.trim() || busy} onClick={submit}>
-          {parentId ? m.ideas_reply() : m.ideas_comment()}
-        </Button>
+      <div className="flex justify-end gap-2">
         {onDone && (
           <Button size="sm" variant="ghost" onClick={onDone}>
             {m.admin_cancel()}
           </Button>
         )}
+        <Button size="sm" disabled={!draft.trim() || busy} onClick={submit}>
+          {parentId ? m.ideas_reply() : m.ideas_comment()}
+        </Button>
       </div>
     </div>
   )
@@ -559,11 +591,19 @@ function CommentItem({
   const removed = !!comment.deletedAt
   const mine = !!me && comment.principalId === me.principalId
   const json = (comment as { contentJson?: unknown }).contentJson
+  const threads = useContext(ThreadsContext)
+  const thread = root && comment.replies?.length > 0 ? flattenThread(comment) : []
+  const closed = threads.isCollapsed(comment.id)
 
   return (
     <li
       id={`comment-${comment.id}`}
-      className="flex scroll-mt-24 gap-3 rounded-card transition-shadow"
+      className={cn(
+        // the highlight after a jump uses the comment's own radius: a soft tint that fades out
+        'squircle -m-3 flex scroll-mt-24 gap-3 rounded-card p-3',
+        'transition-[background-color,box-shadow] duration-700 ease-out motion-reduce:transition-none',
+        'data-[flash]:bg-accent-soft/40 data-[flash]:ring-1 data-[flash]:ring-accent/20 data-[flash]:duration-200'
+      )}
     >
       <Avatar
         size="sm"
@@ -571,8 +611,8 @@ function CommentItem({
         src={comment.avatarUrl ?? undefined}
         name={comment.authorName ?? '?'}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-h-7 flex-wrap items-center gap-2 text-sm">
           <span className="font-medium">{comment.authorName ?? '—'}</span>
           {comment.isTeamMember && (
             <Chip size="sm" variant="soft">
@@ -644,28 +684,56 @@ function CommentItem({
         ) : (
           <RichText size="sm" json={json} text={comment.content} />
         )}
-        {canReply && !removed && !editing && (
-          <button
-            type="button"
-            className="inline-flex w-fit items-center gap-1 text-xs text-muted hover:text-foreground"
-            onClick={() => setReplying((v) => !v)}
-          >
-            <Reply className="size-3.5" /> {m.ideas_reply()}
-          </button>
+        {((canReply && !removed && !editing) || thread.length > 0) && (
+          <div className="flex items-center gap-1 -ms-2">
+            {canReply && !removed && !editing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted"
+                onClick={() => setReplying((v) => !v)}
+              >
+                <Reply /> {m.ideas_reply()}
+              </Button>
+            )}
+            {thread.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted"
+                aria-expanded={!closed}
+                onClick={() => threads.set(comment.id, !closed)}
+              >
+                <ChevronRight
+                  className={cn(
+                    'transition-transform duration-200 motion-reduce:transition-none',
+                    !closed && 'rotate-90'
+                  )}
+                />
+                {closed && <AvatarStack people={thread.map((t) => t.reply)} />}
+                {m.ideas_replies_count({ count: thread.length })}
+              </Button>
+            )}
+          </div>
         )}
         {replying && (
-          <CommentComposer
-            postId={postId}
-            parentId={comment.id}
-            autoFocus
-            onDone={() => setReplying(false)}
-          />
+          <div className="mt-1">
+            <CommentComposer
+              postId={postId}
+              parentId={comment.id}
+              autoFocus
+              onDone={() => {
+                setReplying(false)
+                threads.set(comment.id, false)
+              }}
+            />
+          </div>
         )}
-        {root && comment.replies?.length > 0 && (
+        {thread.length > 0 && !closed && (
           // one level only (owner's note): every reply of the thread sits here, oldest first; a
           // reply to a reply shows what it answers and jumps there
-          <ol className="mt-3 flex flex-col gap-4 border-s border-border ps-4">
-            {flattenThread(comment).map(({ reply, parent }) => (
+          <ol className="mt-4 flex flex-col gap-6 border-s-2 border-border ps-6">
+            {thread.map(({ reply, parent }) => (
               <CommentItem
                 key={reply.id}
                 postId={postId}
@@ -696,7 +764,7 @@ function EditComment({
   const act = useAct(postId)
   const [draft, setDraft] = useState(content)
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <MarkdownEditor
         label={m.admin_edit()}
         rows={3}
@@ -705,7 +773,10 @@ function EditComment({
         onChange={setDraft}
         autoFocus
       />
-      <div className="flex gap-2">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="ghost" onClick={onDone}>
+          {m.admin_cancel()}
+        </Button>
         <Button
           size="sm"
           disabled={!draft.trim()}
@@ -726,11 +797,17 @@ function EditComment({
         >
           {m.settings_save()}
         </Button>
-        <Button size="sm" variant="ghost" onClick={onDone}>
-          {m.admin_cancel()}
-        </Button>
       </div>
     </div>
+  )
+}
+
+/** Comments and all their replies, removed ones left out. */
+function countComments(list: PublicCommentView[]): number {
+  return list.reduce(
+    (sum, c) =>
+      sum + (c.deletedAt ? 0 : 1) + countComments((c.replies ?? []) as PublicCommentView[]),
+    0
   )
 }
 
@@ -747,26 +824,53 @@ function flattenThread(rootComment: PublicCommentView) {
   return out.sort((a, b) => +new Date(a.reply.createdAt) - +new Date(b.reply.createdAt))
 }
 
-/** "Replying to Name: snippet": a click scrolls to that comment and highlights it for a moment. */
+/** Up to three faces of a collapsed thread's repliers (each person once). */
+function AvatarStack({ people }: { people: PublicCommentView[] }) {
+  const seen = new Map<string, PublicCommentView>()
+  for (const p of people) if (!seen.has(p.principalId ?? p.id)) seen.set(p.principalId ?? p.id, p)
+  return (
+    <span className="flex -space-x-1.5" aria-hidden>
+      {[...seen.values()].slice(0, 3).map((p) => (
+        <Avatar
+          key={p.id}
+          size="sm"
+          className="size-5 ring-2 ring-background"
+          classNames={{ fallback: 'text-[0.5rem]' }}
+          src={p.avatarUrl ?? undefined}
+          name={p.authorName ?? '?'}
+        />
+      ))}
+    </span>
+  )
+}
+
+/**
+ * "Replying to Name: snippet" as a small muted quote line; a click scrolls to that comment and
+ * tints it for a moment.
+ */
 function ReplyToChip({ parent }: { parent: PublicCommentView }) {
   const snippet = parent.deletedAt
     ? m.ideas_comment_removed()
-    : parent.content.replace(/\s+/g, ' ').slice(0, 80)
+    : plainText(parent.content).replace(/\s+/g, ' ').trim().slice(0, 100)
   return (
     <button
       type="button"
+      title={m.ideas_reply_to({ name: parent.authorName ?? '—' })}
       onClick={() => {
         const target = document.getElementById(`comment-${parent.id}`)
         if (!target) return
         target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        target.classList.add('ring-2', 'ring-accent/60')
-        setTimeout(() => target.classList.remove('ring-2', 'ring-accent/60'), 1600)
+        target.setAttribute('data-flash', '')
+        setTimeout(() => target.removeAttribute('data-flash'), 1400)
       }}
-      className="flex w-fit max-w-full items-center gap-1.5 rounded-control-sm border-s-2 border-accent/60 bg-surface-2/60 px-2 py-1 text-start text-xs text-muted hover:bg-hover"
+      className={cn(
+        'squircle -ms-2 flex w-fit max-w-full cursor-pointer items-center gap-1.5 rounded-control-sm px-2 py-1 text-start text-xs text-muted outline-none',
+        'transition-colors hover:bg-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
+      )}
     >
-      <Reply className="size-3 shrink-0" />
-      <span className="shrink-0 font-medium text-foreground">{parent.authorName ?? '—'}</span>
-      <span className="truncate">{snippet}</span>
+      <CornerUpLeft className="size-3.5 shrink-0" />
+      <span className="shrink-0 font-medium">{parent.authorName ?? '—'}</span>
+      <span className="truncate opacity-80">{snippet}</span>
     </button>
   )
 }

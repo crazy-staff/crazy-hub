@@ -25,6 +25,13 @@ describe('excerpt', () => {
     expect(cut.endsWith('…')).toBe(true)
     expect(cut.length).toBeLessThanOrEqual(51)
   })
+  it('reads markdown as plain words', () => {
+    expect(
+      excerpt(
+        '## What should it do?\n\nA **fast** _travel_ menu.\n\n- one\n- [two](https://x.y)\n\n![a](b.png)'
+      )
+    ).toBe('A fast travel menu. one two')
+  })
 })
 
 describe('parseIdeasSearch', () => {

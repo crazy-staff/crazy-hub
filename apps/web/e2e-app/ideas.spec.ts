@@ -22,16 +22,30 @@ test.afterAll(async () => {
   await sql.end()
 })
 
-/** Goes through the step-by-step form: kind, what it concerns, details, review. */
-async function postIdea(page: import('@playwright/test').Page, title: string, description = '') {
+/**
+ * Goes through the step-by-step form: kind, what it concerns, details (the idea's structured fields;
+ * "What should it do?" is required), review.
+ */
+async function postIdea(
+  page: import('@playwright/test').Page,
+  title: string,
+  what = 'Something useful.',
+  why = ''
+) {
   await page.getByRole('button', { name: 'Post an idea' }).click()
   const dialog = page.getByRole('dialog', { name: 'Post an idea' })
   await dialog.getByRole('radio', { name: /An idea/ }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByLabel('Title').fill(title)
-  if (description) await dialog.getByRole('textbox', { name: 'Description' }).fill(description)
+  // the description is required: Next says so instead of moving on
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await expect(dialog.getByText(title)).toBeVisible()
+  await expect(dialog.getByText('Fill this in to continue.')).toBeVisible()
+  await dialog.getByRole('textbox', { name: 'What should it do?' }).fill(what)
+  if (why) await dialog.getByRole('textbox', { name: 'Why is it useful?' }).fill(why)
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  // the review shows the title as a heading and the sections as text
+  await expect(dialog.getByRole('heading', { name: title })).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'What should it do?' })).toBeVisible()
   await dialog.getByRole('button', { name: 'Post', exact: true }).click()
 }
 
@@ -61,7 +75,7 @@ test('post an idea and vote on it', async ({ page }) => {
   await page.goto('/trainer/ideas')
   await page.waitForLoadState('networkidle')
   const title = `E2E idea ${Date.now()}`
-  await postIdea(page, title, 'Posted by the **end-to-end** test.\n\n- one\n- two')
+  await postIdea(page, title, 'Posted by the **end-to-end** test.\n\n- one\n- two', 'Saves time.')
 
   await expect(page).toHaveURL(/\/trainer\/ideas\/post_/)
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
@@ -70,6 +84,8 @@ test('post an idea and vote on it', async ({ page }) => {
   // markdown is stored as rich text
   await expect(page.locator('article strong', { hasText: 'end-to-end' })).toBeVisible()
   await expect(page.locator('article li', { hasText: 'two' })).toBeVisible()
+  // the structured fields are headed sections of the one text
+  await expect(page.locator('article h2', { hasText: 'Why is it useful?' })).toBeVisible()
 
   // the author's vote counts from the start; take it back and give it again
   const vote = page.getByRole('button', { name: /vote/i }).first()
@@ -118,6 +134,11 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
   await expect(page.locator('ol ol ol')).toHaveCount(0)
   await expect(replies.getByRole('button', { name: /Comment Author A reply/ })).toBeVisible()
+  // a thread collapses to its reply count and opens again
+  await page.getByRole('button', { name: '2 replies' }).click()
+  await expect(page.locator('ol ol')).toHaveCount(0)
+  await page.getByRole('button', { name: '2 replies' }).click()
+  await expect(replies.getByText('Reply to the reply')).toBeVisible()
 
   // edit the first reply, delete the last one
   await replies.getByRole('button', { name: 'Comment actions' }).first().click()

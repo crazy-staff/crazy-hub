@@ -336,5 +336,36 @@
   "wizard_next": "Weiter",
   "wizard_report": "Melden",
   "error_idea_has_engagement": "Andere haben schon abgestimmt oder kommentiert, die Idee bleibt. Bitte eine Moderation ums Entfernen.",
-  "wizard_choose": "Auswählen …"
+  "wizard_choose": "Auswählen …",
+  "wizard_required": "Bitte ausfüllen, um fortzufahren.",
+  "wizard_optional": "Optional.",
+  "wizard_board_hint": "Wo die Idee veröffentlicht wird.",
+  "wizard_dimension_hint": "Wo das Problem auftritt.",
+  "wizard_title_hint": "Eine kurze Zeile, an der andere den Eintrag in der Liste erkennen.",
+  "wizard_idea_what": "Was soll es tun?",
+  "wizard_idea_what_placeholder": "Eine Karte der Kolonie mit den Teleportpunkten…",
+  "wizard_idea_what_hint": "Die Funktion in ein, zwei Sätzen.",
+  "wizard_idea_how": "Wie soll es funktionieren?",
+  "wizard_idea_how_hint": "Ablauf, Bedienung, ein Beispiel. Optional.",
+  "wizard_idea_why": "Warum ist es nützlich?",
+  "wizard_idea_why_hint": "Wer was davon hat. Optional.",
+  "wizard_review_hint": "So wird es aussehen. Du kannst es danach noch bearbeiten.",
+  "wizard_edit_step": "Bearbeiten: {step}",
+  "ideas_filters_active": "Filter ({count} aktiv)",
+  "ideas_filter_search": "Suchen…",
+  "ideas_filter_nothing": "Keine Treffer.",
+  "ideas_filter_remove": "Filter entfernen: {name}",
+  "ideas_clear_all": "Alle entfernen",
+  "ideas_reply_to": "Antwort an {name}",
+  "ideas_hide_replies": "Antworten ausblenden",
+  "ideas_replies_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Antwort",
+        "countPlural=*": "{count} Antworten"
+      }
+    }
+  ]
 }

@@ -1,9 +1,11 @@
 import {
   Button,
   Checkbox,
-  DropdownMenu,
+  Chip,
+  Collapsible,
   Empty,
   Input,
+  Popover,
   Skeleton,
   Tabs,
   ToggleGroup,
@@ -11,7 +13,7 @@ import {
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router'
-import { Filter, Lightbulb, Plus, Search } from 'lucide-react'
+import { Filter, Lightbulb, Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
@@ -21,6 +23,7 @@ import { Page } from '../../../components/page'
 import { IdeaCard } from '../../../components/ideas/idea-card'
 import { NewIdeaWizard } from '../../../components/ideas/new-idea-wizard'
 import { Appear } from '../../../components/appear'
+import { IconButton } from '../../../components/icon-button'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../../../lib/ideas'
 import { SECTION_META } from '../../../lib/projects'
@@ -91,6 +94,37 @@ function Ideas() {
   }, [posts])
 
   const activeFilters = (search.status?.length ?? 0) + (search.tag?.length ?? 0)
+  const filterGroups: FilterGroupData[] = useMemo(
+    () => [
+      {
+        id: 'status',
+        key: 'status',
+        label: m.ideas_status(),
+        options: statuses.map((s) => ({
+          id: s.id,
+          label: s.name,
+          color: s.color ?? null,
+          checked: search.status?.includes(s.id) ?? false,
+        })),
+      },
+      ...tagGroups.map((group) => ({
+        id: `tag:${group.kind ?? '-'}`,
+        key: 'tag' as const,
+        label: group.kind ? capitalize(group.kind) : m.ideas_tags(),
+        options: group.tags.map((t) => ({
+          id: t.id,
+          label: t.value,
+          checked: search.tag?.includes(t.id) ?? false,
+        })),
+      })),
+    ],
+    [statuses, tagGroups, search.status, search.tag]
+  )
+  const chips = filterGroups.flatMap((group) =>
+    group.options
+      .filter((o) => o.checked)
+      .map((o) => ({ ...o, key: group.key, group: group.label }))
+  )
   const toggle = (key: 'status' | 'tag', id: string, on: boolean) => {
     const list = new Set(search[key] ?? [])
     if (on) list.add(id)
@@ -123,64 +157,52 @@ function Ideas() {
         />
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <ToggleGroup
-          aria-label={m.ideas_sort()}
-          value={[search.sort ?? 'top']}
-          onValueChange={(value) => {
-            const next = value[0] as (typeof IDEA_SORTS)[number] | undefined
-            if (next) setSearch({ sort: next })
-          }}
-          items={IDEA_SORTS.map((s) => ({ value: s, label: SORT_LABEL[s]() }))}
-        />
-        <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger
-            render={<Button variant="outline" size="sm" />}
-            aria-label={m.ideas_filters()}
-          >
-            <Filter /> {m.ideas_filters()}
-            {activeFilters > 0 && (
-              <span className="rounded-chip bg-accent-soft px-1.5 text-xs text-accent-soft-foreground">
-                {activeFilters}
-              </span>
-            )}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content align="end" className="max-h-[70vh] w-72 overflow-y-auto p-2">
-            <FilterGroup label={m.ideas_status()}>
-              {statuses.map((status) => (
-                <Checkbox
-                  key={status.id}
-                  label={status.name}
-                  checked={search.status?.includes(status.id) ?? false}
-                  onCheckedChange={(on) => toggle('status', status.id, on)}
-                />
-              ))}
-            </FilterGroup>
-            {tagGroups.map((group) => (
-              <FilterGroup key={group.kind ?? '-'} label={group.kind ?? m.ideas_tags()}>
-                {group.tags.map((tag) => (
-                  <Checkbox
-                    key={tag.id}
-                    label={tag.value}
-                    checked={search.tag?.includes(tag.id) ?? false}
-                    onCheckedChange={(on) => toggle('tag', tag.id, on)}
-                  />
-                ))}
-              </FilterGroup>
-            ))}
-            {activeFilters > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 w-full"
-                onClick={() => setSearch({ status: [], tag: [] })}
+      <div className="mb-6 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <ToggleGroup
+            variant="ghost"
+            aria-label={m.ideas_sort()}
+            value={[search.sort ?? 'top']}
+            onValueChange={(value) => {
+              const next = value[0] as (typeof IDEA_SORTS)[number] | undefined
+              if (next) setSearch({ sort: next })
+            }}
+            items={IDEA_SORTS.map((s) => ({ value: s, label: SORT_LABEL[s]() }))}
+          />
+          <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
+          <FilterMenu
+            groups={filterGroups}
+            active={activeFilters}
+            onToggle={toggle}
+            onClear={() => setSearch({ status: [], tag: [] })}
+          />
+        </div>
+        {chips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2" aria-label={m.ideas_filters()}>
+            {chips.map((chip) => (
+              <Chip
+                key={`${chip.key}:${chip.id}`}
+                variant="neutral"
+                className="h-7 gap-1.5 ps-2.5 pe-1"
               >
-                {m.ideas_clear_filters()}
-              </Button>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+                {chip.color !== undefined && <Dot color={chip.color} />}
+                <span className="text-muted">{chip.group}:</span>
+                <span className="text-foreground">{chip.label}</span>
+                <button
+                  type="button"
+                  aria-label={m.ideas_filter_remove({ name: `${chip.group}: ${chip.label}` })}
+                  className="flex size-5 cursor-pointer items-center justify-center rounded-full text-muted outline-none hover:bg-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => toggle(chip.key, chip.id, false)}
+                >
+                  <X className="size-3" />
+                </button>
+              </Chip>
+            ))}
+            <Button variant="ghost" size="sm" onClick={() => setSearch({ status: [], tag: [] })}>
+              {m.ideas_clear_all()}
+            </Button>
+          </div>
+        )}
       </div>
 
       {!board ? (
@@ -198,7 +220,7 @@ function Ideas() {
           description={search.q || activeFilters ? undefined : m.ideas_empty_text()}
         />
       ) : (
-        <Appear className={cn('flex flex-col gap-3', posts.isFetching && 'opacity-80')}>
+        <Appear className={cn('flex flex-col gap-4', posts.isFetching && 'opacity-80')}>
           {items.map((post) => (
             <IdeaCard
               key={post.id}
@@ -218,12 +240,143 @@ function Ideas() {
   )
 }
 
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+interface FilterGroupData {
+  id: string
+  key: 'status' | 'tag'
+  label: string
+  /** `color` is set for statuses (a dot in the status colour). */
+  options: { id: string; label: string; color?: string | null; checked: boolean }[]
+}
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
+/** Above this many values a group gets its own search field. */
+const SEARCH_FROM = 7
+
+function Dot({ color }: { color: string | null }) {
   return (
-    <div className="flex flex-col gap-2 px-1 py-2">
-      <span className="text-xs font-medium text-muted capitalize">{label}</span>
-      {children}
-    </div>
+    <span
+      aria-hidden
+      className="size-2 shrink-0 rounded-full"
+      style={{ background: color ?? 'currentColor' }}
+    />
+  )
+}
+
+/**
+ * The filters (#34): an icon button with the count, opening one collapsible section per group
+ * (only Status open at first; a group with a selection opens too), status values with their colour
+ * dot, a search field in long groups.
+ */
+function FilterMenu({
+  groups,
+  active,
+  onToggle,
+  onClear,
+}: {
+  groups: FilterGroupData[]
+  active: number
+  onToggle: (key: 'status' | 'tag', id: string, on: boolean) => void
+  onClear: () => void
+}) {
+  const label = active > 0 ? m.ideas_filters_active({ count: active }) : m.ideas_filters()
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={
+          <IconButton label={label} variant="outline" badge={active || undefined}>
+            <Filter />
+          </IconButton>
+        }
+      />
+      <Popover.Content
+        align="end"
+        className="flex max-h-[min(70vh,36rem)] w-80 flex-col overflow-y-auto p-2"
+      >
+        <Popover.Title className="px-2.5 pt-1.5 pb-2 text-sm font-semibold">
+          {m.ideas_filters()}
+        </Popover.Title>
+        <div className="flex flex-col gap-1">
+          {groups
+            .filter((g) => g.options.length > 0)
+            .map((group) => (
+              <FilterSection
+                key={group.id}
+                group={group}
+                defaultOpen={group.key === 'status' || group.options.some((o) => o.checked)}
+                onToggle={onToggle}
+              />
+            ))}
+        </div>
+        {active > 0 && (
+          <div className="mt-2 border-t border-border px-1 pt-2">
+            <Button variant="ghost" size="sm" className="w-full" onClick={onClear}>
+              {m.ideas_clear_all()}
+            </Button>
+          </div>
+        )}
+      </Popover.Content>
+    </Popover.Root>
+  )
+}
+
+function FilterSection({
+  group,
+  defaultOpen,
+  onToggle,
+}: {
+  group: FilterGroupData
+  defaultOpen: boolean
+  onToggle: (key: 'status' | 'tag', id: string, on: boolean) => void
+}) {
+  const [query, setQuery] = useState('')
+  const picked = group.options.filter((o) => o.checked).length
+  const shown = query
+    ? group.options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : group.options
+  return (
+    <Collapsible.Root defaultOpen={defaultOpen}>
+      <Collapsible.Trigger className="w-full">
+        <span className="me-auto">{group.label}</span>
+        {picked > 0 && (
+          <span className="rounded-full bg-accent-soft px-1.5 text-xs text-accent-soft-foreground tabular-nums">
+            {picked}
+          </span>
+        )}
+      </Collapsible.Trigger>
+      <Collapsible.Panel>
+        <div className="flex flex-col gap-2.5 px-2.5 pt-1.5 pb-3 ps-8">
+          {group.options.length >= SEARCH_FROM && (
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
+              <Input
+                size="sm"
+                type="search"
+                aria-label={`${group.label}: ${m.ideas_filter_search()}`}
+                placeholder={m.ideas_filter_search()}
+                className="ps-8"
+                value={query}
+                onChange={(e) => setQuery(e.currentTarget.value)}
+              />
+            </div>
+          )}
+          {shown.map((option) => (
+            <Checkbox
+              key={option.id}
+              label={
+                <span className="inline-flex items-center gap-2">
+                  {option.color !== undefined && <Dot color={option.color} />}
+                  {option.label}
+                </span>
+              }
+              checked={option.checked}
+              onCheckedChange={(on) => onToggle(group.key, option.id, on)}
+            />
+          ))}
+          {shown.length === 0 && <p className="text-xs text-muted">{m.ideas_filter_nothing()}</p>}
+        </div>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   )
 }
 
@@ -237,14 +390,13 @@ function SearchBox({ value, onChange }: { value: string; onChange: (value: strin
     return () => clearTimeout(timer)
   }, [draft, value, onChange])
   return (
-    <div className="relative ms-auto w-full max-w-64">
-      <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
+    <div className="relative ms-auto w-full max-w-72">
+      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
       <Input
-        size="sm"
         type="search"
         aria-label={m.ideas_search()}
         placeholder={m.ideas_search()}
-        className="ps-8"
+        className="ps-9"
         value={draft}
         onChange={(e) => setDraft(e.currentTarget.value)}
       />
