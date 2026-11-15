@@ -28,9 +28,23 @@ export function groupTags<T extends TagLike>(tags: readonly T[]): TagGroup<T>[] 
   return [...groups.values(), ...(plain ? [plain] : [])]
 }
 
+/**
+ * Markdown as plain words for a one-line preview: headings (the wizard's section titles) are dropped,
+ * images removed, links keep their text, emphasis, code, quote and list marks go.
+ */
+export function plainText(markdown: string): string {
+  return markdown
+    .replace(/^#{1,6}\s.*$/gm, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*(?:[-*+]|\d+\.|>)\s+/gm, '')
+    .replace(/(\*\*|__|`)/g, '')
+    .replace(/(^|\W)[*_]([^*_\n]+)[*_](?=\W|$)/g, '$1$2')
+}
+
 /** The first `max` characters of a post's text on one line, cut at a word. */
 export function excerpt(content: string, max = 180): string {
-  const flat = content.replace(/\s+/g, ' ').trim()
+  const flat = plainText(content).replace(/\s+/g, ' ').trim()
   if (flat.length <= max) return flat
   const cut = flat.slice(0, max)
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max - 20))}…`

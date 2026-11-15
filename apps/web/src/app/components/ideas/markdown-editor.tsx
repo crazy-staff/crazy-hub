@@ -3,7 +3,7 @@
  * quote, code, link, image upload) and a preview tab. The server turns the markdown into the rich text
  * Quackback stores (`markdownToContentFn`), so ideas read as formatted text, not a wall of characters.
  */
-import { Prose, Tabs, Textarea, cn, toast } from '@crazy-staff/ui'
+import { Label, Prose, Tabs, Textarea, cn, toast } from '@crazy-staff/ui'
 import {
   Bold,
   Code,
@@ -17,7 +17,7 @@ import {
   Quote,
   type LucideIcon,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { m } from '../../paraglide/messages.js'
@@ -73,10 +73,23 @@ async function uploadImage(file: File): Promise<string> {
   return result.publicUrl
 }
 
+/** Markdown rendered the way the stored idea will look (preview tab, wizard review). */
+export function MarkdownView({ value, className }: { value: string; className?: string }) {
+  return (
+    <Prose size="sm" className={cn('max-w-none', className)}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+    </Prose>
+  )
+}
+
 export function MarkdownEditor({
   value,
   onChange,
   label,
+  showLabel,
+  required,
+  hint,
+  error,
   placeholder,
   rows = 6,
   maxLength = 10000,
@@ -85,11 +98,19 @@ export function MarkdownEditor({
   value: string
   onChange: (value: string) => void
   label: string
+  /** Show `label` above the editor (forms); otherwise it is only the accessible name (comments). */
+  showLabel?: boolean
+  required?: boolean
+  /** Help text under the editor. */
+  hint?: string
+  /** Shown under the editor in the danger colour, and marks the field invalid. */
+  error?: string | null
   placeholder?: string
   rows?: number
   maxLength?: number
   autoFocus?: boolean
 }) {
+  const id = useId()
   const ref = useRef<HTMLTextAreaElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState('write')
@@ -131,8 +152,13 @@ export function MarkdownEditor({
     'hover:bg-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 [&_svg]:size-4'
   )
 
-  return (
-    <div className="flex flex-col rounded-control border border-border bg-surface">
+  const editor = (
+    <div
+      className={cn(
+        'flex flex-col rounded-control border bg-surface transition-colors',
+        error ? 'border-danger' : 'border-border focus-within:border-accent'
+      )}
+    >
       <div className="flex flex-wrap items-center gap-1 border-b border-border px-1.5 py-1">
         <Tabs
           value={tab}
@@ -184,7 +210,11 @@ export function MarkdownEditor({
       {tab === 'write' ? (
         <Textarea
           ref={ref}
-          aria-label={label}
+          id={`${id}-input`}
+          aria-label={showLabel ? undefined : label}
+          aria-required={required || undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={hint || error ? `${id}-hint` : undefined}
           placeholder={placeholder}
           rows={rows}
           maxLength={maxLength}
@@ -203,13 +233,31 @@ export function MarkdownEditor({
       ) : (
         <div className="min-h-32 px-3 py-2">
           {value.trim() ? (
-            <Prose size="sm" className="max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
-            </Prose>
+            <MarkdownView value={value} />
           ) : (
             <p className="text-sm text-muted">{m.editor_nothing()}</p>
           )}
         </div>
+      )}
+    </div>
+  )
+
+  if (!showLabel && !hint && !error) return editor
+  return (
+    <div className="flex flex-col gap-1.5">
+      {showLabel && (
+        <Label htmlFor={`${id}-input`} required={required}>
+          {label}
+        </Label>
+      )}
+      {editor}
+      {(error || hint) && (
+        <p
+          id={`${id}-hint`}
+          className={cn('text-xs', error ? 'font-medium text-danger' : 'text-muted')}
+        >
+          {error || hint}
+        </p>
       )}
     </div>
   )

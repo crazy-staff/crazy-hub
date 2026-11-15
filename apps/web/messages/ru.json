@@ -336,5 +336,38 @@
   "wizard_next": "Далее",
   "wizard_report": "Отправить",
   "error_idea_has_engagement": "Другие уже голосовали или комментировали, поэтому идея остаётся. Попросите модератора удалить её.",
-  "wizard_choose": "Выберите…"
+  "wizard_choose": "Выберите…",
+  "wizard_required": "Заполните это поле, чтобы продолжить.",
+  "wizard_optional": "Необязательно.",
+  "wizard_board_hint": "Где будет опубликована идея.",
+  "wizard_dimension_hint": "Где возникает проблема.",
+  "wizard_title_hint": "Короткая строка, по которой другие узнают запись в списке.",
+  "wizard_idea_what": "Что это должно делать?",
+  "wizard_idea_what_placeholder": "Карта колонии с точками телепорта…",
+  "wizard_idea_what_hint": "Функция в одном-двух предложениях.",
+  "wizard_idea_how": "Как это должно работать?",
+  "wizard_idea_how_hint": "Порядок действий, управление, пример. Необязательно.",
+  "wizard_idea_why": "Чем это полезно?",
+  "wizard_idea_why_hint": "Кто и что от этого выиграет. Необязательно.",
+  "wizard_review_hint": "Так это будет выглядеть. Потом это тоже можно изменить.",
+  "wizard_edit_step": "Изменить: {step}",
+  "ideas_filters_active": "Фильтры (активно: {count})",
+  "ideas_filter_search": "Поиск…",
+  "ideas_filter_nothing": "Ничего не найдено.",
+  "ideas_filter_remove": "Убрать фильтр: {name}",
+  "ideas_clear_all": "Очистить всё",
+  "ideas_reply_to": "Ответ для {name}",
+  "ideas_hide_replies": "Скрыть ответы",
+  "ideas_replies_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} ответ",
+        "countPlural=few": "{count} ответа",
+        "countPlural=many": "{count} ответов",
+        "countPlural=*": "{count} ответа"
+      }
+    }
+  ]
 }
