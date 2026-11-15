@@ -15,6 +15,7 @@ import {
   db,
   desc,
   eq,
+  inArray,
   isNull,
   lt,
   postComments,
@@ -66,7 +67,10 @@ export async function profileActivity(
   const visibleComment = and(
     eq(postComments.principalId, principalId),
     eq(postComments.isPrivate, false),
-    eq(postComments.moderationState, 'published'),
+    // a comment waiting for approval shows to its author only, as on the idea page
+    actor.principalId === principalId
+      ? inArray(postComments.moderationState, ['published', 'pending'])
+      : eq(postComments.moderationState, 'published'),
     isNull(postComments.deletedAt),
     viewer
   )

@@ -200,6 +200,10 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   // the profile counts the comment and the reply and lists them with what was written
   await page.getByRole('link', { name: 'Comment Author' }).first().click()
   await expect(page).toHaveURL(/\/u\/principal_/)
+  // the first visit compiles the route on the dev server
+  await expect(page.getByRole('heading', { level: 1, name: /Comment Author/ })).toBeVisible({
+    timeout: 20_000,
+  })
   const activity = page.getByRole('list').filter({ hasText: 'Replied in' })
   await expect(activity.getByText('An edited reply')).toBeVisible()
   await expect(activity.getByText('Commented on')).toBeVisible()
