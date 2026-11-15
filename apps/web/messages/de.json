@@ -378,5 +378,6 @@
   "ideas_follow_status": "Nur Statusänderungen",
   "ideas_unfollow": "Nicht mehr folgen",
   "ideas_followed": "Du bekommst Neuigkeiten zu dieser Idee.",
-  "ideas_unfollowed": "Du folgst dieser Idee nicht mehr."
+  "ideas_unfollowed": "Du folgst dieser Idee nicht mehr.",
+  "ideas_all_boards": "Alle Boards"
 }

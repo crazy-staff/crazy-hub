@@ -378,5 +378,6 @@
   "ideas_follow_status": "Status changes only",
   "ideas_unfollow": "Stop following",
   "ideas_followed": "You'll get updates on this idea.",
-  "ideas_unfollowed": "You stopped following this idea."
+  "ideas_unfollowed": "You stopped following this idea.",
+  "ideas_all_boards": "All boards"
 }

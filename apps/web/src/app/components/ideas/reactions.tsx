@@ -1,7 +1,7 @@
 /**
- * Emoji reactions of a comment (#5): a chip per emoji with its count (pressed when the viewer
- * reacted, the names in a tooltip) and an icon button with Quackback's fixed set of emojis.
- * Optimistic; the idea refetches afterwards.
+ * Emoji reactions of a comment (#5): chips under the text (one per emoji with its count, pressed
+ * when the viewer reacted, the names in a tooltip) and a picker in the comment's action row with
+ * Quackback's fixed set of emojis. Optimistic; the idea refetches afterwards.
  */
 import { Popover, Tooltip, cn, toast } from '@crazy-staff/ui'
 import { useQueryClient } from '@tanstack/react-query'
@@ -28,28 +28,15 @@ export function toggleReaction(
     : list.map((r) => (r.emoji === emoji ? { ...r, count, hasReacted: !r.hasReacted } : r))
 }
 
-export function Reactions({
-  postId,
-  commentId,
-  reactions,
-  canReact,
-}: {
-  postId: string
-  commentId: string
-  reactions: CommentReactionCount[]
-  canReact: boolean
-}) {
+/** The reactions of one comment as shown, and toggling one (optimistic). */
+export function useReactions(postId: string, commentId: string, reactions: CommentReactionCount[]) {
   const queryClient = useQueryClient()
   const [shown, setShown] = useState(reactions)
-  const [open, setOpen] = useState(false)
   useEffect(() => setShown(reactions), [reactions])
-
   const toggle = async (emoji: string) => {
-    if (!canReact) return
     const before = shown
     const had = before.find((r) => r.emoji === emoji)?.hasReacted ?? false
     setShown(toggleReaction(before, emoji))
-    setOpen(false)
     try {
       const data = { commentId: commentId as PostCommentId, emoji }
       if (had) await removeReactionFn({ data })
@@ -60,11 +47,23 @@ export function Reactions({
       toast.error(errorMessage(err))
     }
   }
+  return { shown, toggle }
+}
 
-  if (shown.length === 0 && !canReact) return null
+/** One chip per emoji with its count; pressed when the viewer reacted, names in a tooltip. */
+export function ReactionChips({
+  reactions,
+  canReact,
+  onToggle,
+}: {
+  reactions: CommentReactionCount[]
+  canReact: boolean
+  onToggle: (emoji: string) => void
+}) {
+  if (reactions.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {shown.map((r) => (
+      {reactions.map((r) => (
         <Tooltip
           key={r.emoji}
           content={r.reactors?.length ? r.reactors.join(', ') : `${r.emoji} ${r.count}`}
@@ -74,7 +73,7 @@ export function Reactions({
             aria-pressed={r.hasReacted}
             aria-label={`${r.emoji} ${r.count}`}
             disabled={!canReact}
-            onClick={() => void toggle(r.emoji)}
+            onClick={() => onToggle(r.emoji)}
             className={cn(
               'squircle inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-chip border px-2 text-xs tabular-nums outline-none transition-colors',
               'focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default',
@@ -88,30 +87,38 @@ export function Reactions({
           </button>
         </Tooltip>
       ))}
-      {canReact && (
-        <Popover.Root open={open} onOpenChange={setOpen}>
-          <Popover.Trigger
-            render={
-              <IconButton label={m.ideas_react()} size="icon-sm" className="text-muted">
-                <SmilePlus />
-              </IconButton>
-            }
-          />
-          <Popover.Content side="top" align="start" className="flex gap-1 p-1.5">
-            {REACTION_EMOJIS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                aria-label={emoji}
-                onClick={() => void toggle(emoji)}
-                className="squircle flex size-9 cursor-pointer items-center justify-center rounded-control-sm text-lg outline-none transition-transform hover:scale-110 hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100"
-              >
-                {emoji}
-              </button>
-            ))}
-          </Popover.Content>
-        </Popover.Root>
-      )}
     </div>
+  )
+}
+
+/** The icon button with Quackback's fixed set of emojis; sits in the comment's action row. */
+export function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger
+        render={
+          <IconButton label={m.ideas_react()} size="icon-sm" className="text-muted">
+            <SmilePlus />
+          </IconButton>
+        }
+      />
+      <Popover.Content side="top" align="start" className="flex gap-1 p-1.5">
+        {REACTION_EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            aria-label={emoji}
+            onClick={() => {
+              setOpen(false)
+              onPick(emoji)
+            }}
+            className="squircle flex size-9 cursor-pointer items-center justify-center rounded-control-sm text-lg outline-none transition-transform hover:scale-110 hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100"
+          >
+            {emoji}
+          </button>
+        ))}
+      </Popover.Content>
+    </Popover.Root>
   )
 }

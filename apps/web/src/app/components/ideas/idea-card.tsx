@@ -25,6 +25,7 @@ export function IdeaCard({
   upvotes,
   downvotes,
   mine,
+  showBoard,
 }: {
   post: PublicPostListItem
   project: string
@@ -33,6 +34,8 @@ export function IdeaCard({
   upvotes?: number
   downvotes?: number
   mine?: IdeaVote
+  /** Show the board's name (the "All boards" view). */
+  showBoard?: boolean
 }) {
   return (
     <Card.Root interactive className="relative flex items-start gap-5 p-5">
@@ -54,6 +57,11 @@ export function IdeaCard({
           <span className="line-clamp-2 text-sm text-muted">{excerpt(post.content, 240)}</span>
         )}
         <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+          {showBoard && post.board && (
+            <Chip size="sm" variant="outline">
+              {post.board.name}
+            </Chip>
+          )}
           {status && <StatusChip name={status.name} color={status.color} />}
           {post.tags.map((tag) => (
             <Chip key={tag.id} size="sm" variant="neutral">

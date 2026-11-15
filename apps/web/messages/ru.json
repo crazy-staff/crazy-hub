@@ -380,5 +380,6 @@
   "ideas_follow_status": "Только смена статуса",
   "ideas_unfollow": "Перестать следить",
   "ideas_followed": "Вы будете получать новости об этой идее.",
-  "ideas_unfollowed": "Вы больше не следите за идеей."
+  "ideas_unfollowed": "Вы больше не следите за идеей.",
+  "ideas_all_boards": "Все доски"
 }

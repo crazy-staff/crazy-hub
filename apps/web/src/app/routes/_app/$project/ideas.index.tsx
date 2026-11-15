@@ -49,6 +49,9 @@ export const Route = createFileRoute('/_app/$project/ideas/')({
   component: Ideas,
 })
 
+/** The `board` value of the "All boards" tab (not a valid board slug). */
+const ALL_BOARDS = '~all'
+
 const SORT_LABEL = { top: m.ideas_sort_top, new: m.ideas_sort_new, trending: m.ideas_sort_trending }
 
 function Ideas() {
@@ -59,7 +62,17 @@ function Ideas() {
   const signedIn = !!session?.user && session.user.principalType !== 'anonymous'
   const [creating, setCreating] = useState(false)
 
-  const board = project.boards.find((b) => b.slug === search.board) ?? project.boards[0]
+  // "All boards" only when the project holds every public board: Quackback's list takes one board
+  // or none (= the whole workspace), so with another project's boards around it would leak them
+  const workspaceBoards = useQuery(portalQueries.boards()).data
+  const canShowAll =
+    project.boards.length > 1 &&
+    !!workspaceBoards &&
+    workspaceBoards.every((b) => project.boards.some((own) => own.id === b.id))
+  const showAll = canShowAll && search.board === ALL_BOARDS
+  const board = showAll
+    ? undefined
+    : (project.boards.find((b) => b.slug === search.board) ?? project.boards[0])
   const statuses = useQuery(portalQueries.statuses()).data ?? []
   const tags = useQuery(portalQueries.tags()).data ?? []
   const tagGroups = useMemo(() => groupTags(tags), [tags])
@@ -69,13 +82,13 @@ function Ideas() {
 
   const posts = usePublicPosts({
     filters: {
-      board: board?.slug,
+      board: showAll ? undefined : board?.slug,
       sort: search.sort ?? 'top',
       search: search.q,
       status: search.status,
       tagIds: search.tag,
     },
-    enabled: !!board,
+    enabled: showAll || !!board,
   })
   const items = flattenPublicPosts(posts.data)
   const votes = useIdeaVotes(items.map((p) => p.id)).data
@@ -141,7 +154,7 @@ function Ideas() {
       title={SECTION_META.ideas.label()}
       description={SECTION_META.ideas.description()}
       actions={
-        board && (
+        project.boards.length > 0 && (
           <Button
             onClick={() =>
               signedIn ? setCreating(true) : void navigate({ to: '.', search: openSignIn })
@@ -154,9 +167,14 @@ function Ideas() {
     >
       {project.boards.length > 1 && (
         <Tabs
-          value={board?.slug}
+          value={showAll ? ALL_BOARDS : board?.slug}
           onValueChange={(value) => setSearch({ board: String(value) })}
-          items={project.boards.map((b) => ({ value: b.slug, label: b.name, content: null }))}
+          items={[
+            ...(canShowAll
+              ? [{ value: ALL_BOARDS, label: m.ideas_all_boards(), content: null }]
+              : []),
+            ...project.boards.map((b) => ({ value: b.slug, label: b.name, content: null })),
+          ]}
           classNames={{ panel: 'hidden' }}
         />
       )}
@@ -209,7 +227,7 @@ function Ideas() {
         )}
       </div>
 
-      {!board ? (
+      {!board && !showAll ? (
         <Empty icon={<Lightbulb />} title={m.ideas_no_board()} />
       ) : posts.isPending ? (
         <div className="flex flex-col gap-3">
@@ -234,6 +252,7 @@ function Ideas() {
               upvotes={votes?.up[post.id]}
               downvotes={votes?.down[post.id]}
               mine={votes?.mine[post.id] ?? null}
+              showBoard={showAll}
             />
           ))}
           <div ref={sentinel} />
@@ -241,7 +260,11 @@ function Ideas() {
         </Appear>
       )}
       {creating && (
-        <NewIdeaWizard project={project} boardId={board?.id} onClose={() => setCreating(false)} />
+        <NewIdeaWizard
+          project={project}
+          boardId={board?.id ?? project.boards[0]?.id}
+          onClose={() => setCreating(false)}
+        />
       )}
     </Page>
   )

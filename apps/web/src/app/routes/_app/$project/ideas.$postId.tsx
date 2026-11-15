@@ -69,7 +69,7 @@ import { TagPicker } from '../../../components/ideas/tag-picker'
 import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IconButton } from '../../../components/icon-button'
 import { FollowButton } from '../../../components/ideas/follow-button'
-import { Reactions } from '../../../components/ideas/reactions'
+import { ReactionChips, ReactionPicker, useReactions } from '../../../components/ideas/reactions'
 import { errorMessage } from '../../../lib/admin'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
 import { plainText } from '../../../lib/ideas'
@@ -605,6 +605,7 @@ function CommentItem({
   const threads = useContext(ThreadsContext)
   const thread = root && comment.replies?.length > 0 ? flattenThread(comment) : []
   const closed = threads.isCollapsed(comment.id)
+  const reactions = useReactions(postId, comment.id, comment.reactions ?? [])
 
   return (
     <li
@@ -696,11 +697,10 @@ function CommentItem({
           <RichText size="sm" json={json} text={comment.content} />
         )}
         {!removed && !editing && (
-          <Reactions
-            postId={postId}
-            commentId={comment.id}
-            reactions={comment.reactions ?? []}
+          <ReactionChips
+            reactions={reactions.shown}
             canReact={canReply}
+            onToggle={(emoji) => void reactions.toggle(emoji)}
           />
         )}
         {((canReply && !removed && !editing) || thread.length > 0) && (
@@ -714,6 +714,9 @@ function CommentItem({
               >
                 <Reply /> {m.ideas_reply()}
               </Button>
+            )}
+            {canReply && !removed && !editing && (
+              <ReactionPicker onPick={(emoji) => void reactions.toggle(emoji)} />
             )}
             {thread.length > 0 && (
               <Button
