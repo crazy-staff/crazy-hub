@@ -389,5 +389,12 @@
   "project_new_board": "New board",
   "project_board_name": "Name",
   "project_board_description": "Description",
-  "project_board_created": "Board created and added to the project."
+  "project_board_created": "Board created and added to the project.",
+  "ideas_facts": "About this idea",
+  "ideas_votes": "Votes",
+  "ideas_author": "Author",
+  "ideas_created": "Posted",
+  "ideas_moved": "Idea moved.",
+  "ideas_admin_panel": "Admin",
+  "ideas_project_settings": "Project settings"
 }

@@ -223,7 +223,11 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   // a removed comment without replies disappears for everyone outside Quackback's team
   await expect(mod.getByText('First comment')).toBeHidden()
   // lock comments
-  await mod.getByRole('button', { name: 'Lock comments' }).click()
+  // the moderation panel on the right: move the idea to another board, then lock comments
+  await mod.getByRole('combobox', { name: 'Board' }).click()
+  await mod.getByRole('option', { selected: false }).first().click()
+  await expect(mod.getByText('Idea moved.')).toBeVisible()
+  await mod.getByRole('switch', { name: 'Lock comments' }).click()
   await expect(mod.getByText('Comments are locked.')).toBeVisible()
   await mod.close()
   expect(authorEmail).toContain('@')

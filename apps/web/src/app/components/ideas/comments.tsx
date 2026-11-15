@@ -1,0 +1,587 @@
+/**
+ * The comments of an idea (#5): composer, threads one level deep (every reply of a thread sits under
+ * its first comment, oldest first; a reply to a reply says what it answers), edit / delete / remove /
+ * restore / pin, reactions.
+ *
+ * Threads look like YouTube's (owner's note, #45): a line runs down from the first comment's avatar
+ * and curves into every reply's avatar, then into the "Hide replies" row; folded, it curves into
+ * "N replies". The whole line lights up when any part of it is hovered, and it folds or unfolds on
+ * click. A thread whose comments are all removed is not shown at all.
+ */
+import { AlertDialog, Avatar, Button, Chip, DropdownMenu, cn } from '@crazy-staff/ui'
+import { useNavigate } from '@tanstack/react-router'
+import {
+  CornerUpLeft,
+  EyeOff,
+  Lock,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  Reply,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react'
+import { createContext, useContext, useState } from 'react'
+import type { PostCommentId, PostId } from '@quackback/ids'
+import type { PublicCommentView } from '@/lib/client/queries/portal-detail'
+import {
+  createCommentFn,
+  userDeleteCommentFn,
+  userEditCommentFn,
+} from '@/lib/server/functions/comments'
+import {
+  markdownToContentFn,
+  pinCommentFn,
+  removeCommentFn,
+  restoreCommentFn,
+} from '@/lib/server/crazy/ideas-functions'
+import { m } from '../../paraglide/messages.js'
+import { formatDate, useAct, useMe } from '../../lib/idea-act'
+import { plainText } from '../../lib/ideas'
+import { AuthorLink } from '../author-link'
+import { openSignIn } from '../auth/auth-dialog'
+import { MarkdownEditor } from './markdown-editor'
+import { RichText } from './rich-text'
+import { ReactionChips, ReactionPicker, useReactions } from './reactions'
+
+/** Which threads are folded (kept by `Comments`, so it survives refetches while on the page). */
+const ThreadsContext = createContext<{
+  isCollapsed: (id: string) => boolean
+  set: (id: string, collapsed: boolean) => void
+}>({ isCollapsed: () => false, set: () => {} })
+
+/**
+ * The thread line's colour: border, accent while any part of the line (marked `data-thread-line`) is
+ * hovered or focused. `group/thread` sits on the thread's first comment.
+ */
+const LINE = cn(
+  'border-border transition-colors duration-150',
+  'group-has-[[data-thread-line]:hover]/thread:border-accent',
+  'group-has-[[data-thread-line]:focus-visible]/thread:border-accent'
+)
+const LINE_BG = cn(
+  'bg-border transition-colors duration-150',
+  'group-has-[[data-thread-line]:hover]/thread:bg-accent',
+  'group-has-[[data-thread-line]:focus-visible]/thread:bg-accent'
+)
+
+export function Comments({
+  postId,
+  comments,
+  canComment,
+  locked,
+  pinnedId,
+  moderator,
+}: {
+  postId: string
+  comments: PublicCommentView[]
+  canComment: boolean
+  locked: boolean
+  pinnedId: string | null
+  moderator: boolean
+}) {
+  const me = useMe()
+  const navigate = useNavigate()
+  // a thread whose comments are all removed is left out (owner's note, #45)
+  const visible = comments.filter((c) => c.id !== pinnedId && !allRemoved(c))
+  const total = countComments(visible)
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
+  const threads = {
+    isCollapsed: (id: string) => collapsed.has(id),
+    set: (id: string, closed: boolean) =>
+      setCollapsed((all) => {
+        const next = new Set(all)
+        if (closed) next.add(id)
+        else next.delete(id)
+        return next
+      }),
+  }
+
+  return (
+    <ThreadsContext value={threads}>
+      <section className="mt-2 flex flex-col gap-6 border-t border-border pt-8">
+        <h2 className="text-lg font-semibold">
+          {m.ideas_comments()}
+          {total > 0 && (
+            <span className="ms-2 text-sm font-normal text-muted tabular-nums">{total}</span>
+          )}
+        </h2>
+        {locked ? (
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Lock className="size-4" /> {m.ideas_comments_locked()}
+          </p>
+        ) : !me ? (
+          <Button
+            variant="outline"
+            className="w-fit"
+            onClick={() => void navigate({ to: '.', search: openSignIn })}
+          >
+            {m.ideas_sign_in_to_comment()}
+          </Button>
+        ) : canComment ? (
+          <CommentComposer postId={postId} />
+        ) : null}
+        {visible.length === 0 ? (
+          <p className="text-sm text-muted">{m.ideas_no_comments()}</p>
+        ) : (
+          <ol className="mt-2 flex flex-col gap-8">
+            {visible.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                postId={postId}
+                comment={comment}
+                canReply={canComment && !locked && !!me}
+                moderator={moderator}
+                root
+              />
+            ))}
+          </ol>
+        )}
+      </section>
+    </ThreadsContext>
+  )
+}
+
+function CommentComposer({
+  postId,
+  parentId,
+  onDone,
+  autoFocus,
+}: {
+  postId: string
+  parentId?: string
+  onDone?: () => void
+  autoFocus?: boolean
+}) {
+  const act = useAct(postId)
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    const markdown = draft.trim()
+    if (!markdown) return
+    setBusy(true)
+    const ok = await act(async () => {
+      const contentJson = await markdownToContentFn({ data: { markdown } })
+      await createCommentFn({
+        data: {
+          postId: postId as PostId,
+          content: markdown,
+          contentJson: contentJson as never,
+          parentId: parentId as PostCommentId | undefined,
+        },
+      })
+    })
+    setBusy(false)
+    if (ok) {
+      setDraft('')
+      onDone?.()
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <MarkdownEditor
+        label={m.ideas_comment()}
+        placeholder={m.ideas_comment_placeholder()}
+        rows={parentId ? 2 : 3}
+        maxLength={5000}
+        value={draft}
+        onChange={setDraft}
+        autoFocus={autoFocus}
+      />
+      <div className="flex justify-end gap-2">
+        {onDone && (
+          <Button size="sm" variant="ghost" onClick={onDone}>
+            {m.admin_cancel()}
+          </Button>
+        )}
+        <Button size="sm" disabled={!draft.trim() || busy} onClick={submit}>
+          {parentId ? m.ideas_reply() : m.ideas_comment()}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/*
+ * Geometry of the thread line (the comment row is `-m-3 p-3`, avatar 32px, gap 12px):
+ * - in the first comment's row the avatar's centre is 1.75rem from the row's edge and the text
+ *   column starts at 3.5rem; the line starts 0.5rem under the avatar (top 3.25rem);
+ * - a reply's row starts 0.75rem left of the text column, so the line runs 1rem left of the reply
+ *   row's edge, and the reply's avatar centre is 1.75rem down from the row's top;
+ * - the last row ("Hide replies" / "N replies") is 2rem tall, its centre 1.75rem above the bottom of
+ *   the first comment's row.
+ */
+
+function CommentItem({
+  postId,
+  comment,
+  canReply,
+  moderator,
+  root,
+  replyTo,
+  inThread,
+}: {
+  postId: string
+  comment: PublicCommentView
+  canReply: boolean
+  moderator: boolean
+  root?: boolean
+  /** In a thread: the reply this one answers, when it isn't the thread's first comment. */
+  replyTo?: PublicCommentView
+  /** A reply under a first comment: gets its curve from the thread line. */
+  inThread?: boolean
+}) {
+  const me = useMe()
+  const act = useAct(postId)
+  const [replying, setReplying] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const removed = !!comment.deletedAt
+  const mine = !!me && comment.principalId === me.principalId
+  const json = (comment as { contentJson?: unknown }).contentJson
+  const threads = useContext(ThreadsContext)
+  const thread = root ? flattenThread(comment) : []
+  const closed = threads.isCollapsed(comment.id)
+  const reactions = useReactions(postId, comment.id, comment.reactions ?? [])
+  const toggle = () => threads.set(comment.id, !closed)
+
+  return (
+    <li
+      id={`comment-${comment.id}`}
+      className={cn(
+        // the highlight after a jump uses the comment's own radius: a soft tint that fades out
+        'squircle relative -m-3 flex scroll-mt-24 gap-3 rounded-card p-3',
+        'transition-[background-color,box-shadow] duration-700 ease-out motion-reduce:transition-none',
+        'data-[flash]:bg-accent-soft/40 data-[flash]:ring-1 data-[flash]:ring-accent/20 data-[flash]:duration-200',
+        root && 'group/thread'
+      )}
+    >
+      {inThread && (
+        // the curve from the thread line into this reply's avatar
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute -start-[calc(1rem+1px)] top-4 h-3 w-[calc(1.5rem+1px)] rounded-es-lg border-s-2 border-b-2',
+            LINE
+          )}
+        />
+      )}
+      <Avatar
+        size="sm"
+        className="relative size-8 shrink-0"
+        src={comment.avatarUrl ?? undefined}
+        name={comment.authorName ?? '?'}
+      />
+      {thread.length > 0 && (
+        <>
+          {/* the thread line: down from the avatar to the last row, where it curves in */}
+          <button
+            type="button"
+            data-thread-line=""
+            aria-label={m.ideas_toggle_replies()}
+            aria-expanded={!closed}
+            onClick={toggle}
+            className="absolute start-3 top-[3.25rem] bottom-[2.5rem] flex w-8 cursor-pointer justify-center outline-none"
+          >
+            <span className={cn('w-0.5', LINE_BG)} />
+          </button>
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-3 w-[calc(1.25rem+1px)] rounded-es-lg border-s-2 border-b-2',
+              LINE
+            )}
+          />
+        </>
+      )}
+      {/* deleting asks first (owner's note, round 4) */}
+      <AlertDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={m.ideas_comment_delete_confirm()}
+        cancelLabel={m.admin_cancel()}
+        actionLabel={m.admin_delete()}
+        tone="danger"
+        onAction={() => void act(() => userDeleteCommentFn({ data: { commentId: comment.id } }))}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-h-7 flex-wrap items-center gap-2 text-sm">
+          <AuthorLink principalId={comment.principalId} className="font-medium">
+            {comment.authorName ?? '—'}
+          </AuthorLink>
+          {comment.isTeamMember && (
+            <Chip size="sm" variant="soft">
+              {m.ideas_team()}
+            </Chip>
+          )}
+          <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
+          {(mine || moderator) && (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger
+                render={<Button variant="ghost" size="icon-sm" className="ms-auto" />}
+                aria-label={m.ideas_comment_actions()}
+              >
+                <MoreHorizontal />
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end">
+                {mine && !removed && (
+                  <DropdownMenu.Item onClick={() => setEditing(true)}>
+                    <Pencil /> {m.admin_edit()}
+                  </DropdownMenu.Item>
+                )}
+                {mine && !removed && (
+                  <DropdownMenu.Item danger onClick={() => setConfirmDelete(true)}>
+                    <Trash2 /> {m.admin_delete()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && root && !removed && (
+                  <DropdownMenu.Item
+                    onClick={() =>
+                      act(() => pinCommentFn({ data: { postId, commentId: comment.id } }))
+                    }
+                  >
+                    <Pin /> {m.ideas_pin()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && !mine && !removed && (
+                  <DropdownMenu.Item
+                    danger
+                    onClick={() => act(() => removeCommentFn({ data: { commentId: comment.id } }))}
+                  >
+                    <EyeOff /> {m.ideas_remove_comment()}
+                  </DropdownMenu.Item>
+                )}
+                {moderator && removed && (
+                  <DropdownMenu.Item
+                    onClick={() => act(() => restoreCommentFn({ data: { commentId: comment.id } }))}
+                  >
+                    <RotateCcw /> {m.ideas_restore_comment()}
+                  </DropdownMenu.Item>
+                )}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          )}
+        </div>
+        {replyTo && <ReplyToChip parent={replyTo} />}
+        {editing ? (
+          <EditComment
+            postId={postId}
+            commentId={comment.id}
+            content={comment.content}
+            onDone={() => setEditing(false)}
+          />
+        ) : removed ? (
+          <p className="text-sm text-muted italic">{m.ideas_comment_removed()}</p>
+        ) : (
+          <RichText size="sm" json={json} text={comment.content} />
+        )}
+        {!removed && !editing && (
+          <ReactionChips
+            reactions={reactions.shown}
+            canReact={canReply}
+            onToggle={(emoji) => void reactions.toggle(emoji)}
+          />
+        )}
+        {canReply && !removed && !editing && (
+          <div className="-ms-2 flex min-h-8 items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted"
+              onClick={() => setReplying((v) => !v)}
+            >
+              <Reply /> {m.ideas_reply()}
+            </Button>
+            <ReactionPicker
+              picked={reactions.shown.filter((r) => r.hasReacted).map((r) => r.emoji)}
+              onPick={(emoji) => void reactions.toggle(emoji)}
+            />
+          </div>
+        )}
+        {replying && (
+          <div className="mt-1">
+            <CommentComposer
+              postId={postId}
+              parentId={comment.id}
+              autoFocus
+              onDone={() => {
+                setReplying(false)
+                threads.set(comment.id, false)
+              }}
+            />
+          </div>
+        )}
+        {thread.length > 0 && !closed && (
+          <ol className="mt-4 flex flex-col gap-6">
+            {thread.map(({ reply, parent }) => (
+              <CommentItem
+                key={reply.id}
+                postId={postId}
+                comment={reply}
+                canReply={canReply}
+                moderator={moderator}
+                replyTo={parent.id === comment.id ? undefined : parent}
+                inThread
+              />
+            ))}
+          </ol>
+        )}
+        {thread.length > 0 && (
+          // the last row, where the line curves in: "Hide replies", or folded "N replies"
+          <button
+            type="button"
+            data-thread-line=""
+            aria-expanded={!closed}
+            onClick={toggle}
+            className={cn(
+              'flex h-8 w-fit cursor-pointer items-center gap-2 rounded-control-sm pe-2 text-sm font-medium outline-none transition-colors',
+              closed
+                ? 'mt-1 text-accent hover:brightness-110'
+                : 'mt-3 text-muted hover:text-foreground'
+            )}
+          >
+            {closed ? (
+              <>
+                <AvatarStack people={thread.map((t) => t.reply)} />
+                {m.ideas_replies_count({ count: thread.length })}
+              </>
+            ) : (
+              m.ideas_hide_replies()
+            )}
+          </button>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function EditComment({
+  postId,
+  commentId,
+  content,
+  onDone,
+}: {
+  postId: string
+  commentId: string
+  content: string
+  onDone: () => void
+}) {
+  const act = useAct(postId)
+  const [draft, setDraft] = useState(content)
+  return (
+    <div className="flex flex-col gap-3">
+      <MarkdownEditor
+        label={m.admin_edit()}
+        rows={3}
+        maxLength={5000}
+        value={draft}
+        onChange={setDraft}
+        autoFocus
+      />
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="ghost" onClick={onDone}>
+          {m.admin_cancel()}
+        </Button>
+        <Button
+          size="sm"
+          disabled={!draft.trim()}
+          onClick={async () => {
+            const markdown = draft.trim()
+            const ok = await act(async () => {
+              const contentJson = await markdownToContentFn({ data: { markdown } })
+              await userEditCommentFn({
+                data: {
+                  commentId: commentId as PostCommentId,
+                  content: markdown,
+                  contentJson: contentJson as never,
+                },
+              })
+            })
+            if (ok) onDone()
+          }}
+        >
+          {m.settings_save()}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+const replies = (c: PublicCommentView) => (c.replies ?? []) as PublicCommentView[]
+
+/** True when the comment and everything under it is removed. */
+export function allRemoved(comment: PublicCommentView): boolean {
+  return !!comment.deletedAt && replies(comment).every(allRemoved)
+}
+
+/** Comments and all their replies, removed ones left out. */
+export function countComments(list: PublicCommentView[]): number {
+  return list.reduce((sum, c) => sum + (c.deletedAt ? 0 : 1) + countComments(replies(c)), 0)
+}
+
+/**
+ * Every reply under a thread's first comment, oldest first, with the comment each one answers. A
+ * removed reply that nobody kept answering is left out, like a removed thread.
+ */
+export function flattenThread(rootComment: PublicCommentView) {
+  const out: { reply: PublicCommentView; parent: PublicCommentView }[] = []
+  const walk = (parent: PublicCommentView) => {
+    for (const reply of replies(parent)) {
+      if (!allRemoved(reply)) out.push({ reply, parent })
+      walk(reply)
+    }
+  }
+  walk(rootComment)
+  return out.sort((a, b) => +new Date(a.reply.createdAt) - +new Date(b.reply.createdAt))
+}
+
+/** Up to three faces of a folded thread's repliers (each person once). */
+function AvatarStack({ people }: { people: PublicCommentView[] }) {
+  const seen = new Map<string, PublicCommentView>()
+  for (const p of people) if (!seen.has(p.principalId ?? p.id)) seen.set(p.principalId ?? p.id, p)
+  return (
+    <span className="flex -space-x-0.5" aria-hidden>
+      {[...seen.values()].slice(0, 3).map((p) => (
+        <Avatar
+          key={p.id}
+          size="sm"
+          className="size-5 ring-2 ring-background"
+          classNames={{ fallback: 'text-[0.5rem]' }}
+          src={p.avatarUrl ?? undefined}
+          name={p.authorName ?? '?'}
+        />
+      ))}
+    </span>
+  )
+}
+
+/**
+ * "Replying to Name: snippet" as a small muted quote line; a click scrolls to that comment and
+ * tints it for a moment.
+ */
+function ReplyToChip({ parent }: { parent: PublicCommentView }) {
+  const snippet = parent.deletedAt
+    ? m.ideas_comment_removed()
+    : plainText(parent.content).replace(/\s+/g, ' ').trim().slice(0, 100)
+  return (
+    <button
+      type="button"
+      title={m.ideas_reply_to({ name: parent.authorName ?? '—' })}
+      onClick={() => {
+        const target = document.getElementById(`comment-${parent.id}`)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        target.setAttribute('data-flash', '')
+        setTimeout(() => target.removeAttribute('data-flash'), 1400)
+      }}
+      className={cn(
+        'squircle -ms-2 flex w-fit max-w-full cursor-pointer items-center gap-1.5 rounded-control-sm px-2 py-1 text-start text-xs text-muted outline-none',
+        'transition-colors hover:bg-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
+      )}
+    >
+      <CornerUpLeft className="size-3.5 shrink-0" />
+      <span className="shrink-0 font-medium">{parent.authorName ?? '—'}</span>
+      <span className="truncate opacity-80">{snippet}</span>
+    </button>
+  )
+}

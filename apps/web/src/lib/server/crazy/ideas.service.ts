@@ -3,7 +3,14 @@
  * functions need its team role, which moderators never get; these check the caller's permission in
  * the project the idea belongs to (through its board) and then call Quackback's domain services.
  */
-import type { PostCommentId, PostId, PostStatusId, PostTagId, UserId } from '@quackback/ids'
+import type {
+  BoardId,
+  PostCommentId,
+  PostId,
+  PostStatusId,
+  PostTagId,
+  UserId,
+} from '@quackback/ids'
 import {
   and,
   crazyProjectBoards,
@@ -76,6 +83,27 @@ export async function setIdeaStatus(postId: string, statusId: string) {
     principalId: access.principalId,
     userId: access.userId,
   })
+}
+
+/**
+ * Moves an idea to another board of the same project (moderation side panel, #45). Triage, so it
+ * goes with `ideas.status`. Quackback's `updatePost` has no board field; the row is updated here and
+ * merged ideas pointing at it stay where they are.
+ */
+export async function moveIdea(postId: string, boardId: string) {
+  const access = await requireIdeaPermission(postId, 'ideas.status')
+  const [target] = await db
+    .select({ projectId: crazyProjectBoards.projectId })
+    .from(crazyProjectBoards)
+    .where(eq(crazyProjectBoards.boardId, boardId as BoardId))
+    .limit(1)
+  if (!target || target.projectId !== access.projectId) {
+    throw new Error('Access denied: the board is not in this project')
+  }
+  await db
+    .update(posts)
+    .set({ boardId: boardId as BoardId, updatedAt: new Date() })
+    .where(eq(posts.id, postId as PostId))
 }
 
 /** Only these tags may be chosen by authors (Quackback's public tags). */

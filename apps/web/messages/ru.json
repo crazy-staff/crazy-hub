@@ -391,5 +391,12 @@
   "project_new_board": "Новая доска",
   "project_board_name": "Название",
   "project_board_description": "Описание",
-  "project_board_created": "Доска создана и добавлена в проект."
+  "project_board_created": "Доска создана и добавлена в проект.",
+  "ideas_facts": "Об идее",
+  "ideas_votes": "Голоса",
+  "ideas_author": "Автор",
+  "ideas_created": "Создано",
+  "ideas_moved": "Идея перемещена.",
+  "ideas_admin_panel": "Админ",
+  "ideas_project_settings": "Настройки проекта"
 }

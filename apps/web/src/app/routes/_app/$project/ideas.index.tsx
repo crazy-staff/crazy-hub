@@ -12,8 +12,8 @@ import {
   cn,
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router'
-import { Filter, Lightbulb, Plus, Search, X } from 'lucide-react'
+import { createFileRoute, notFound, useNavigate, useRouteContext } from '@tanstack/react-router'
+import { Filter, Lightbulb, Plus, Search, Settings2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
@@ -28,6 +28,8 @@ import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../../../lib/ideas'
 import { SECTION_META } from '../../../lib/projects'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
+import { IdeasAdminPanelContent } from '../../../components/ideas/ideas-admin-panel'
+import { SidePanel, SidePanelInline, useWideLayout } from '../../../components/side-panel'
 
 /**
  * A project's ideas (#5): the posts of its boards, sorted, searched and filtered by status and tags
@@ -149,8 +151,31 @@ function Ideas() {
     setSearch({ [key]: [...list] })
   }
 
+  // quick admin actions in the right column (owner's note, #45)
+  const admin = useRouteContext({
+    from: '__root__',
+    select: (c) => !!c.hub.me?.permissions.includes('projects.manage'),
+  })
+  const adminPanel = admin ? (
+    <IdeasAdminPanelContent
+      project={project}
+      currentBoard={showAll ? undefined : board?.slug}
+      onPickBoard={(slug) => setSearch({ board: slug })}
+    />
+  ) : null
+
+  const wide = useWideLayout()
+
   return (
     <Page
+      toc={
+        wide &&
+        adminPanel && (
+          <SidePanel title={m.ideas_admin_panel()} icon={Settings2}>
+            {adminPanel}
+          </SidePanel>
+        )
+      }
       title={SECTION_META.ideas.label()}
       description={SECTION_META.ideas.description()}
       actions={
@@ -165,6 +190,11 @@ function Ideas() {
         )
       }
     >
+      {!wide && adminPanel && (
+        <SidePanelInline title={m.ideas_admin_panel()} icon={Settings2}>
+          {adminPanel}
+        </SidePanelInline>
+      )}
       {project.boards.length > 1 && (
         <Tabs
           value={showAll ? ALL_BOARDS : board?.slug}

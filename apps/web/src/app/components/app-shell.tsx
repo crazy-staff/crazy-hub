@@ -44,7 +44,7 @@ export function AppShell({
   return (
     <Sidebar.Provider className="h-svh min-h-0 overflow-hidden" width="17rem">
       {variant === 'admin' ? <AdminSidebar /> : <AppSidebar />}
-      <Sidebar.Inset className="@container isolate min-h-0 overflow-hidden">
+      <Sidebar.Inset data-panel-container="" className="@container isolate min-h-0 overflow-hidden">
         {/* the accent glow, top left of every page */}
         <div
           aria-hidden

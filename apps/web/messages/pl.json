@@ -391,5 +391,12 @@
   "project_new_board": "Nowy board",
   "project_board_name": "Nazwa",
   "project_board_description": "Opis",
-  "project_board_created": "Board utworzony i dodany do projektu."
+  "project_board_created": "Board utworzony i dodany do projektu.",
+  "ideas_facts": "O pomyśle",
+  "ideas_votes": "Głosy",
+  "ideas_author": "Autor",
+  "ideas_created": "Dodano",
+  "ideas_moved": "Przeniesiono pomysł.",
+  "ideas_admin_panel": "Admin",
+  "ideas_project_settings": "Ustawienia projektu"
 }
