@@ -22,7 +22,8 @@ import {
 } from '@tanstack/react-router'
 import {
   ArrowLeft,
-  ChevronRight,
+  CircleMinus,
+  CirclePlus,
   CornerUpLeft,
   EyeOff,
   Lock,
@@ -725,18 +726,30 @@ function CommentItem({
         src={comment.avatarUrl ?? undefined}
         name={comment.authorName ?? '?'}
       />
-      {thread.length > 0 && !closed && (
+      {thread.length > 0 && (
         // the thread line under the avatar, as on Reddit (owner's note, round 4): it runs down past
-        // the replies, lights up on hover and folds the thread when clicked
-        <button
-          type="button"
-          aria-label={m.ideas_toggle_replies()}
-          aria-expanded
-          onClick={() => threads.set(comment.id, true)}
-          className="group absolute start-3 top-[3.25rem] bottom-3 flex w-8 cursor-pointer justify-center outline-none"
-        >
-          <span className="w-0.5 rounded-full bg-border transition-colors duration-150 group-hover:bg-accent group-focus-visible:bg-accent" />
-        </button>
+        // the replies and lights up on hover; a click folds or unfolds the thread. Folded, it ends in
+        // a curve that leads to the ⊕ "N replies" row.
+        <>
+          <button
+            type="button"
+            aria-label={m.ideas_toggle_replies()}
+            aria-expanded={!closed}
+            onClick={() => threads.set(comment.id, !closed)}
+            className={cn(
+              'group absolute start-3 top-[3.25rem] flex w-8 cursor-pointer justify-center outline-none',
+              closed ? 'bottom-[2.25rem]' : 'bottom-3'
+            )}
+          >
+            <span className="w-0.5 rounded-full bg-border transition-colors duration-150 group-hover:bg-accent group-focus-visible:bg-accent" />
+          </button>
+          {closed && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute start-[calc(1.75rem-1px)] bottom-[calc(1.75rem-1px)] h-2.5 w-[calc(1.75rem+1px)] rounded-es-lg border-s-2 border-b-2 border-border"
+            />
+          )}
+        </>
       )}
       {/* deleting asks first (owner's note, round 4) */}
       <AlertDialog
@@ -827,7 +840,7 @@ function CommentItem({
           />
         )}
         {((canReply && !removed && !editing) || thread.length > 0) && (
-          <div className="flex items-center gap-1 -ms-2">
+          <div className="relative -ms-2 flex min-h-8 items-center gap-1">
             {canReply && !removed && !editing && (
               <Button
                 variant="ghost"
@@ -841,23 +854,16 @@ function CommentItem({
             {canReply && !removed && !editing && (
               <ReactionPicker onPick={(emoji) => void reactions.toggle(emoji)} />
             )}
-            {thread.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted"
-                aria-expanded={!closed}
-                onClick={() => threads.set(comment.id, !closed)}
+            {thread.length > 0 && !closed && (
+              // ⊖ on the thread line, level with the actions (as on Reddit)
+              <button
+                type="button"
+                aria-label={m.ideas_hide_replies()}
+                onClick={() => threads.set(comment.id, true)}
+                className="absolute -start-[1.875rem] top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-background text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <ChevronRight
-                  className={cn(
-                    'transition-transform duration-200 motion-reduce:transition-none',
-                    !closed && 'rotate-90'
-                  )}
-                />
-                {closed && <AvatarStack people={thread.map((t) => t.reply)} />}
-                {m.ideas_replies_count({ count: thread.length })}
-              </Button>
+                <CircleMinus className="size-4" />
+              </button>
             )}
           </div>
         )}
@@ -873,6 +879,18 @@ function CommentItem({
               }}
             />
           </div>
+        )}
+        {thread.length > 0 && closed && (
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => threads.set(comment.id, false)}
+            className="mt-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-control-sm pe-2 text-sm text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <CirclePlus className="size-5 shrink-0" />
+            <AvatarStack people={thread.map((t) => t.reply)} />
+            {m.ideas_replies_count({ count: thread.length })}
+          </button>
         )}
         {thread.length > 0 && !closed && (
           // one level only (owner's note): every reply of the thread sits here, oldest first; a

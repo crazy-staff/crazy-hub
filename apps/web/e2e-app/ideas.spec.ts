@@ -171,8 +171,8 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
   await expect(page.locator('ol ol ol')).toHaveCount(0)
   await expect(replies.getByRole('button', { name: /Comment Author A reply/ })).toBeVisible()
-  // a thread collapses to its reply count and opens again
-  await page.getByRole('button', { name: '2 replies' }).click()
+  // ⊖ on the thread line folds it to "2 replies", which opens it again
+  await page.getByRole('button', { name: 'Hide replies' }).click()
   await expect(page.locator('ol ol')).toHaveCount(0)
   await page.getByRole('button', { name: '2 replies' }).click()
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
