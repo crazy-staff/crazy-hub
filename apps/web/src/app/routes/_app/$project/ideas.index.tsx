@@ -13,7 +13,7 @@ import {
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, useNavigate, useRouteContext } from '@tanstack/react-router'
-import { Filter, Lightbulb, Plus, Search, Settings2, X } from 'lucide-react'
+import { Filter, Lightbulb, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
@@ -180,11 +180,6 @@ function Ideas() {
       description={SECTION_META.ideas.description()}
       actions={
         <>
-          {!wide && adminPanel && (
-            <SidePanelDrawer title={m.ideas_admin_panel()} icon={Settings2} variant="outline">
-              {adminPanel}
-            </SidePanelDrawer>
-          )}
           {project.boards.length > 0 && (
             <Button
               onClick={() =>
@@ -212,9 +207,11 @@ function Ideas() {
       )}
 
       <div className="mb-8 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ToggleGroup
             variant="ghost"
+            // a little tighter on a phone so the sort and the icon buttons share one row
+            classNames={{ item: 'max-sm:px-2' }}
             aria-label={m.ideas_sort()}
             value={[search.sort ?? 'top']}
             onValueChange={(value) => {
@@ -223,13 +220,21 @@ function Ideas() {
             }}
             items={IDEA_SORTS.map((s) => ({ value: s, label: SORT_LABEL[s]() }))}
           />
-          <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
-          <FilterMenu
-            groups={filterGroups}
-            active={activeFilters}
-            onToggle={toggle}
-            onClear={() => setSearch({ status: [], tag: [] })}
-          />
+          {/* the icon buttons stay together, also when the row wraps on a phone */}
+          <div className="ms-auto flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
+            <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
+            <FilterMenu
+              groups={filterGroups}
+              active={activeFilters}
+              onToggle={toggle}
+              onClear={() => setSearch({ status: [], tag: [] })}
+            />
+            {!wide && adminPanel && (
+              <SidePanelDrawer title={m.ideas_admin_panel()} icon={ShieldCheck} variant="outline">
+                {adminPanel}
+              </SidePanelDrawer>
+            )}
+          </div>
         </div>
         {chips.length > 0 && (
           <div className="flex flex-wrap items-center gap-2" aria-label={m.ideas_filters()}>

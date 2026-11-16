@@ -100,7 +100,11 @@ function SortableRow({ id, children }: { id: string; children: (handle: ReactNod
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={cn('relative', isDragging && 'z-10 opacity-90 shadow-overlay')}
+      className={cn(
+        'relative',
+        // only the row being dragged gets a surface of its own, rounded inside the card's outline
+        isDragging && 'squircle z-10 rounded-control bg-surface opacity-95 shadow-overlay'
+      )}
     >
       {children(handle)}
     </div>

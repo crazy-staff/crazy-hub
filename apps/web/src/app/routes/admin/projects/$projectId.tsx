@@ -366,7 +366,7 @@ function Dimensions({ project }: { project: ProjectAdmin }) {
                 onMove={(id, to) => act(() => moveDimensionValueFn({ data: { id, to } }))}
               >
                 {(value, valueHandle) => (
-                  <div className="flex items-center gap-2 bg-surface py-2.5 ps-2 pe-4">
+                  <div className="flex items-center gap-2 py-2.5 ps-2 pe-4">
                     {valueHandle}
                     <Badge text={value.short} muted={value.status !== 'available'} />
                     <span className="flex min-w-0 flex-1 flex-col">

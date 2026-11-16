@@ -48,7 +48,7 @@ function Projects() {
           }}
         >
           {(project, handle) => (
-            <div className="flex items-center gap-2 bg-surface py-3 ps-2 pe-4">
+            <div className="flex items-center gap-2 py-3 ps-2 pe-4">
               {handle}
               <Badge text={project.short} muted={project.archived} />
               <Link

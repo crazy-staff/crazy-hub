@@ -1,58 +1,57 @@
 /**
- * Round flags of the UI languages (owner's note, round 6). Drawn as SVG: Windows has no flag emoji.
- * English uses the Union Jack.
+ * Flags of the UI languages (owner's note, round 6): 16:9 with the buttons' squircle corners.
+ * Drawn as SVG because Windows has no flag emoji. English uses the Union Jack.
  */
 import { cn } from '@crazy-staff/ui'
 import type { ReactNode } from 'react'
 import type { Locale } from '../paraglide/runtime.js'
 
+// every flag is drawn on a 64 × 36 (16:9) canvas
 const FLAGS: Record<Locale, ReactNode> = {
   en: (
     <>
-      <rect width="60" height="60" fill="#012169" />
-      <path d="M0 0 60 60M60 0 0 60" stroke="#fff" strokeWidth="12" />
-      <path d="M0 0 60 60M60 0 0 60" stroke="#C8102E" strokeWidth="4" />
-      <path d="M30 0v60M0 30h60" stroke="#fff" strokeWidth="18" />
-      <path d="M30 0v60M0 30h60" stroke="#C8102E" strokeWidth="10" />
+      <rect width="64" height="36" fill="#012169" />
+      <path d="M0 0 64 36M64 0 0 36" stroke="#fff" strokeWidth="7" />
+      <path d="M0 0 64 36M64 0 0 36" stroke="#C8102E" strokeWidth="2.5" />
+      <path d="M32 0v36M0 18h64" stroke="#fff" strokeWidth="12" />
+      <path d="M32 0v36M0 18h64" stroke="#C8102E" strokeWidth="7" />
     </>
   ),
   pl: (
     <>
-      <rect width="60" height="30" fill="#fff" />
-      <rect y="30" width="60" height="30" fill="#DC143C" />
+      <rect width="64" height="18" fill="#fff" />
+      <rect y="18" width="64" height="18" fill="#DC143C" />
     </>
   ),
   de: (
     <>
-      <rect width="60" height="20" fill="#000" />
-      <rect y="20" width="60" height="20" fill="#DD0000" />
-      <rect y="40" width="60" height="20" fill="#FFCE00" />
+      <rect width="64" height="12" fill="#000" />
+      <rect y="12" width="64" height="12" fill="#DD0000" />
+      <rect y="24" width="64" height="12" fill="#FFCE00" />
     </>
   ),
   ru: (
     <>
-      <rect width="60" height="20" fill="#fff" />
-      <rect y="20" width="60" height="20" fill="#0039A6" />
-      <rect y="40" width="60" height="20" fill="#D52B1E" />
+      <rect width="64" height="12" fill="#fff" />
+      <rect y="12" width="64" height="12" fill="#0039A6" />
+      <rect y="24" width="64" height="12" fill="#D52B1E" />
     </>
   ),
 }
 
 export function Flag({ locale, className }: { locale: Locale; className?: string }) {
   return (
-    <svg
-      viewBox="0 0 60 60"
+    <span
       aria-hidden
       className={cn(
-        // a hairline ring keeps white stripes visible on a light surface
-        'size-4.5 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/15',
+        // the buttons' squircle; a hairline ring keeps white stripes visible on a light surface
+        'squircle inline-flex aspect-video w-5.5 shrink-0 overflow-hidden rounded-[0.25rem] ring-1 ring-black/10 dark:ring-white/15',
         className
       )}
     >
-      <clipPath id={`flag-${locale}`}>
-        <circle cx="30" cy="30" r="30" />
-      </clipPath>
-      <g clipPath={`url(#flag-${locale})`}>{FLAGS[locale]}</g>
-    </svg>
+      <svg viewBox="0 0 64 36" preserveAspectRatio="none" className="size-full!">
+        {FLAGS[locale]}
+      </svg>
+    </span>
   )
 }
