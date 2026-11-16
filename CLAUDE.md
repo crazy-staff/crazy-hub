@@ -60,7 +60,9 @@ accounts and tester ranks for the **Crazy Gothic Trainer**. Built on **Quackback
 - **Talk to him in Polish.** Everything on GitHub is in **English**. Labels use `kind: value`.
 - One conversation = one feature, started from a GitHub issue that holds the spec. Tell him when to start
   a new conversation and whether it should be Chat (planning) or Code (repo work).
-- Review on his setup: 3440×1440, 100 %, Zen browser (Firefox engine). Screenshots with Playwright
+- Design rules (declutter, destructive red, mobile drawers…) are in `docs/kickoff.md` → _Rules learned_
+  and crazy-ui `docs/guidelines.md`. Whenever the owner settles a design question, update both.
+- Review on his setup: 3440×1440, 100 %, Zen browser (Firefox engine). Check phone width (390px) too. Screenshots with Playwright
   Firefox at that size, on a copy of his real data (dump of his local portal), never only demo seed data.
 - Local clones live in `F:\Documents\projects\<repo>` on his Windows PC.
 

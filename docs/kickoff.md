@@ -84,6 +84,14 @@ reinvent them:
 - Destructive actions are always red (owner, 2026-11-15): delete, remove, ban, avatar removal… use the
   danger tone (red text/icon, red hover tint; `IconButton tone="danger"`, `DropdownMenu.Item danger`,
   `AlertDialog tone="danger"`) and ask for confirmation first.
+- Mobile (owner, round 7, 2026-11-16): below `sm` whatever is small and opens is a bottom drawer with
+  48px rows (`components/adaptive.tsx`: `AdaptiveMenu`, `AdaptivePopover`; `lib/use-phone.ts`);
+  toggles that don't fit become a button that opens a drawer (`components/choice-field.tsx`); the menu
+  button floats bottom right; management panels open from an icon button among the page's controls
+  (`components/side-panel.tsx`: column on wide screens, drawer with touch sizes on narrow ones).
+  Full rule: crazy-ui `docs/guidelines.md` → _Mobile_.
+- **Keep the design rules current**: when the owner settles a design question in a review, write the
+  rule into crazy-ui `docs/guidelines.md` and this list in the same change.
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list
   every change with the page/link where it can be seen.
 
