@@ -8,8 +8,9 @@
  * unfolds the thread (no separate button) and lights up as a whole when any part is hovered. A
  * thread whose comments are all removed is not shown at all.
  */
-import { AlertDialog, Avatar, Button, Chip, DropdownMenu, cn } from '@crazy-staff/ui'
+import { AlertDialog, Avatar, Button, Chip, cn } from '@crazy-staff/ui'
 import { useNavigate } from '@tanstack/react-router'
+import { AdaptiveMenu } from '../adaptive'
 import {
   CornerUpLeft,
   EyeOff,
@@ -344,50 +345,63 @@ function CommentItem({
           )}
           <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
           {(mine || moderator) && (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger
-                render={<Button variant="ghost" size="icon-sm" className="ms-auto" />}
-                aria-label={m.ideas_comment_actions()}
-              >
-                <MoreHorizontal />
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content align="end">
-                {mine && !removed && (
-                  <DropdownMenu.Item onClick={() => setEditing(true)}>
-                    <Pencil /> {m.admin_edit()}
-                  </DropdownMenu.Item>
-                )}
-                {mine && !removed && (
-                  <DropdownMenu.Item danger onClick={() => setConfirmDelete(true)}>
-                    <Trash2 /> {m.admin_delete()}
-                  </DropdownMenu.Item>
-                )}
-                {moderator && root && !removed && (
-                  <DropdownMenu.Item
-                    onClick={() =>
-                      act(() => pinCommentFn({ data: { postId, commentId: comment.id } }))
-                    }
-                  >
-                    <Pin /> {m.ideas_pin()}
-                  </DropdownMenu.Item>
-                )}
-                {moderator && !mine && !removed && (
-                  <DropdownMenu.Item
-                    danger
-                    onClick={() => act(() => removeCommentFn({ data: { commentId: comment.id } }))}
-                  >
-                    <EyeOff /> {m.ideas_remove_comment()}
-                  </DropdownMenu.Item>
-                )}
-                {moderator && removed && (
-                  <DropdownMenu.Item
-                    onClick={() => act(() => restoreCommentFn({ data: { commentId: comment.id } }))}
-                  >
-                    <RotateCcw /> {m.ideas_restore_comment()}
-                  </DropdownMenu.Item>
-                )}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
+            <AdaptiveMenu
+              title={m.ideas_comment_actions()}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="ms-auto"
+                  aria-label={m.ideas_comment_actions()}
+                >
+                  <MoreHorizontal />
+                </Button>
+              }
+              entries={[
+                ...(mine && !removed
+                  ? [
+                      { label: m.admin_edit(), icon: <Pencil />, onSelect: () => setEditing(true) },
+                      {
+                        label: m.admin_delete(),
+                        icon: <Trash2 />,
+                        danger: true,
+                        onSelect: () => setConfirmDelete(true),
+                      },
+                    ]
+                  : []),
+                ...(moderator && root && !removed
+                  ? [
+                      {
+                        label: m.ideas_pin(),
+                        icon: <Pin />,
+                        onSelect: () =>
+                          void act(() => pinCommentFn({ data: { postId, commentId: comment.id } })),
+                      },
+                    ]
+                  : []),
+                ...(moderator && !mine && !removed
+                  ? [
+                      {
+                        label: m.ideas_remove_comment(),
+                        icon: <EyeOff />,
+                        danger: true,
+                        onSelect: () =>
+                          void act(() => removeCommentFn({ data: { commentId: comment.id } })),
+                      },
+                    ]
+                  : []),
+                ...(moderator && removed
+                  ? [
+                      {
+                        label: m.ideas_restore_comment(),
+                        icon: <RotateCcw />,
+                        onSelect: () =>
+                          void act(() => restoreCommentFn({ data: { commentId: comment.id } })),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           )}
         </div>
         {replyTo && <ReplyToChip parent={replyTo} />}

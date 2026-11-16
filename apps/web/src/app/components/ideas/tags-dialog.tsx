@@ -16,6 +16,7 @@ export function TagsDialog({
   current,
   moderator,
   iconOnly,
+  iconSize = 'icon-sm',
   className,
 }: {
   postId: string
@@ -23,6 +24,7 @@ export function TagsDialog({
   moderator?: boolean
   /** An icon button with a tooltip (side panel) instead of a labelled button. */
   iconOnly?: boolean
+  iconSize?: 'icon' | 'icon-sm'
   className?: string
 }) {
   const act = useAct(postId)
@@ -34,7 +36,7 @@ export function TagsDialog({
       {iconOnly ? (
         <IconButton
           label={m.ideas_edit_tags()}
-          size="icon-sm"
+          size={iconSize}
           className={className}
           onClick={() => {
             setValue(current)

@@ -16,3 +16,20 @@ test('an unknown project is a 404', async ({ page }) => {
   const response = await page.goto('/no-such-project/ideas')
   expect(response?.status()).toBe(404)
 })
+
+// On a phone the menu opens from the bottom right and small menus open as drawers (round 7).
+test('phone: the menu button and the language drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: 'Open sidebar' }).click()
+  await expect(page.getByRole('dialog', { name: 'Main navigation' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Language' }).click()
+  const drawer = page.getByRole('dialog', { name: 'Language' })
+  await expect(drawer.getByRole('button', { name: 'Polski' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'English' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
+})
