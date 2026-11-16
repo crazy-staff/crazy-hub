@@ -3,10 +3,11 @@
  * when the viewer reacted, the names in a tooltip) and a picker in the comment's action row with
  * Quackback's fixed set of emojis. Optimistic; the idea refetches afterwards.
  */
-import { Popover, Tooltip, cn, toast } from '@crazy-staff/ui'
+import { Drawer, Popover, Tooltip, cn, toast } from '@crazy-staff/ui'
+import { usePhone } from '../../lib/use-phone'
 import { useQueryClient } from '@tanstack/react-query'
 import { SmilePlus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { cloneElement, useEffect, useState } from 'react'
 import type { PostCommentId } from '@quackback/ids'
 import type { CommentReactionCount } from '@/lib/shared/comment-tree'
 import { REACTION_EMOJIS } from '@/lib/shared/db-types'
@@ -101,35 +102,53 @@ export function ReactionPicker({
   onPick: (emoji: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  const phone = usePhone()
+  const trigger = (
+    <IconButton label={m.ideas_react()} size="icon-sm" className="text-muted">
+      <SmilePlus />
+    </IconButton>
+  )
+  const emojis = REACTION_EMOJIS.map((emoji) => (
+    <button
+      key={emoji}
+      type="button"
+      aria-label={emoji}
+      aria-pressed={picked.includes(emoji)}
+      onClick={() => {
+        setOpen(false)
+        onPick(emoji)
+      }}
+      className={cn(
+        'squircle flex cursor-pointer items-center justify-center outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100',
+        // on a phone: large targets in the drawer
+        phone ? 'size-14 rounded-control text-2xl' : 'size-9 rounded-control-sm text-lg',
+        // already chosen: an accent tint and ring, as the chip under the comment
+        picked.includes(emoji) ? 'bg-accent-soft ring-1 ring-accent/50' : 'hover:bg-hover'
+      )}
+    >
+      {emoji}
+    </button>
+  ))
+  if (phone) {
+    return (
+      <>
+        {cloneElement(trigger, { onClick: () => setOpen(true) })}
+        <Drawer.Root open={open} onOpenChange={setOpen}>
+          <Drawer.Content>
+            <Drawer.Title>{m.ideas_react()}</Drawer.Title>
+            <Drawer.Body>
+              <div className="flex flex-wrap justify-center gap-2 pb-6">{emojis}</div>
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Root>
+      </>
+    )
+  }
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        render={
-          <IconButton label={m.ideas_react()} size="icon-sm" className="text-muted">
-            <SmilePlus />
-          </IconButton>
-        }
-      />
+      <Popover.Trigger render={trigger} />
       <Popover.Content side="top" align="start" className="flex w-auto gap-1 p-1.5">
-        {REACTION_EMOJIS.map((emoji) => (
-          <button
-            key={emoji}
-            type="button"
-            aria-label={emoji}
-            aria-pressed={picked.includes(emoji)}
-            onClick={() => {
-              setOpen(false)
-              onPick(emoji)
-            }}
-            className={cn(
-              'squircle flex size-9 cursor-pointer items-center justify-center rounded-control-sm text-lg outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100',
-              // already chosen: an accent tint and ring, as the chip under the comment
-              picked.includes(emoji) ? 'bg-accent-soft ring-1 ring-accent/50' : 'hover:bg-hover'
-            )}
-          >
-            {emoji}
-          </button>
-        ))}
+        {emojis}
       </Popover.Content>
     </Popover.Root>
   )

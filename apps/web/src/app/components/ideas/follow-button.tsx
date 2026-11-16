@@ -3,9 +3,9 @@
  * changes only) or stops following it, through Quackback's subscriptions. Voting and commenting
  * subscribe automatically there, so the bell often starts on.
  */
-import { DropdownMenu, toast } from '@crazy-staff/ui'
+import { toast } from '@crazy-staff/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, BellOff, BellRing, Check } from 'lucide-react'
+import { Bell, BellOff, BellRing } from 'lucide-react'
 import type { PostId } from '@quackback/ids'
 import { getVoteSidebarDataFn } from '@/lib/server/functions/public-posts'
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/lib/server/functions/subscriptions'
 import { m } from '../../paraglide/messages.js'
 import { errorMessage } from '../../lib/admin'
+import { AdaptiveMenu } from '../adaptive'
 import { IconButton } from '../icon-button'
 
 export function FollowButton({ postId }: { postId: string }) {
@@ -40,29 +41,31 @@ export function FollowButton({ postId }: { postId: string }) {
   }
 
   const label = level === 'none' ? m.ideas_follow() : m.ideas_following()
-  const item = (value: 'all' | 'status_only', text: string) => (
-    <DropdownMenu.Item onClick={() => void set(value)}>
-      {level === value ? <Check /> : <span className="size-4" />} {text}
-    </DropdownMenu.Item>
-  )
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        render={
-          <IconButton label={label} className={level === 'none' ? undefined : 'text-accent'}>
-            {level === 'none' ? <Bell /> : <BellRing />}
-          </IconButton>
-        }
-      />
-      <DropdownMenu.Content align="end">
-        {item('all', m.ideas_follow_all())}
-        {item('status_only', m.ideas_follow_status())}
-        {level !== 'none' && (
-          <DropdownMenu.Item onClick={() => void set('none')}>
-            <BellOff /> {m.ideas_unfollow()}
-          </DropdownMenu.Item>
-        )}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <AdaptiveMenu
+      title={label}
+      trigger={
+        <IconButton label={label} className={level === 'none' ? undefined : 'text-accent'}>
+          {level === 'none' ? <Bell /> : <BellRing />}
+        </IconButton>
+      }
+      entries={[
+        {
+          label: m.ideas_follow_all(),
+          icon: <BellRing />,
+          checked: level === 'all',
+          onSelect: () => void set('all'),
+        },
+        {
+          label: m.ideas_follow_status(),
+          icon: <Bell />,
+          checked: level === 'status_only',
+          onSelect: () => void set('status_only'),
+        },
+        ...(level !== 'none'
+          ? [{ label: m.ideas_unfollow(), icon: <BellOff />, onSelect: () => void set('none') }]
+          : []),
+      ]}
+    />
   )
 }

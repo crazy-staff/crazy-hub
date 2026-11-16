@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   FolderKanban,
   LayoutDashboard,
+  Menu,
   PanelLeft,
   ShieldCheck,
   type LucideIcon,
@@ -52,6 +53,7 @@ export function AppShell({
         />
         <TopBar />
         <PanelScroller>{children}</PanelScroller>
+        <MenuFab />
       </Sidebar.Inset>
       {/* opens on ?auth=signin|signup from any page */}
       <AuthDialog />
@@ -239,11 +241,31 @@ function AdminSidebar() {
  * Floats over the page (the glow runs under it), the docs' top bar: 56px, 24px in from the left, 16px
  * from the right. The open button shows only while the sidebar is closed.
  */
+/** On a phone: the menu button floats bottom right, where the thumb is (owner's note, round 7). */
+function MenuFab() {
+  const { toggle } = useSidebar()
+  return (
+    <button
+      type="button"
+      aria-label={m.sidebar_open()}
+      onClick={toggle}
+      className={cn(
+        'squircle fixed end-5 bottom-5 z-20 flex size-14 items-center justify-center rounded-card md:hidden',
+        'border border-border bg-surface text-foreground shadow-overlay outline-none',
+        'transition-transform duration-[var(--cui-duration-fast)] ease-ui active:scale-95 focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-6'
+      )}
+    >
+      <Menu />
+    </button>
+  )
+}
+
 function TopBar() {
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center gap-1.5 ps-6 pe-4">
       <div className="pointer-events-auto flex items-center">
-        <CollapseButton className="-ms-2 in-data-[sidebar=open]:md:hidden" />
+        {/* on a phone the menu opens from the bottom right instead, under the thumb */}
+        <CollapseButton className="-ms-2 max-md:hidden in-data-[sidebar=open]:md:hidden" />
       </div>
       <div className="pointer-events-auto ms-auto flex items-center gap-1.5">
         <LanguageMenu />

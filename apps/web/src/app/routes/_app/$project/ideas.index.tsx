@@ -3,16 +3,23 @@ import {
   Checkbox,
   Chip,
   Collapsible,
+  Drawer,
   Empty,
   Input,
-  Popover,
+  InputGroup,
   Skeleton,
   Tabs,
   ToggleGroup,
   cn,
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, useNavigate, useRouteContext } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  notFound,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
 import { Filter, Lightbulb, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
@@ -29,7 +36,9 @@ import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../..
 import { SECTION_META } from '../../../lib/projects'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
 import { IdeasAdminPanelContent } from '../../../components/ideas/ideas-admin-panel'
-import { SidePanel, SidePanelDrawer, useWideLayout } from '../../../components/side-panel'
+import { SidePanel, SidePanelButton, useSidePanel } from '../../../components/side-panel'
+import { AdaptivePopover } from '../../../components/adaptive'
+import { usePhone } from '../../../lib/use-phone'
 
 /**
  * A project's ideas (#5): the posts of its boards, sorted, searched and filtered by status and tags
@@ -164,14 +173,13 @@ function Ideas() {
     />
   ) : null
 
-  const wide = useWideLayout()
+  const side = useSidePanel('ideas-admin')
 
   return (
     <Page
       toc={
-        wide &&
         adminPanel && (
-          <SidePanel id="ideas-admin" title={m.ideas_admin_panel()}>
+          <SidePanel panel={side} title={m.ideas_admin_panel()}>
             {adminPanel}
           </SidePanel>
         )
@@ -222,17 +230,27 @@ function Ideas() {
           />
           {/* the icon buttons stay together, also when the row wraps on a phone */}
           <div className="ms-auto flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
-            <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
+            <SearchBox
+              value={search.q ?? ''}
+              onChange={(q) => setSearch({ q })}
+              results={items.slice(0, 6).map((post) => ({ id: post.id, title: post.title }))}
+              project={project.slug}
+            />
             <FilterMenu
               groups={filterGroups}
               active={activeFilters}
               onToggle={toggle}
               onClear={() => setSearch({ status: [], tag: [] })}
             />
-            {!wide && adminPanel && (
-              <SidePanelDrawer title={m.ideas_admin_panel()} icon={ShieldCheck} variant="outline">
+            {adminPanel && (
+              <SidePanelButton
+                panel={side}
+                title={m.ideas_admin_panel()}
+                icon={ShieldCheck}
+                variant="outline"
+              >
                 {adminPanel}
-              </SidePanelDrawer>
+              </SidePanelButton>
             )}
           </div>
         </div>
@@ -348,42 +366,36 @@ function FilterMenu({
 }) {
   const label = active > 0 ? m.ideas_filters_active({ count: active }) : m.ideas_filters()
   return (
-    <Popover.Root>
-      <Popover.Trigger
-        render={
-          <IconButton label={label} variant="outline" badge={active || undefined}>
-            <Filter />
-          </IconButton>
-        }
-      />
-      <Popover.Content
-        align="end"
-        className="flex max-h-[min(70vh,36rem)] w-80 flex-col overflow-y-auto p-2"
-      >
-        <Popover.Title className="px-2.5 pt-1.5 pb-2 text-sm font-semibold">
-          {m.ideas_filters()}
-        </Popover.Title>
-        <div className="flex flex-col gap-1">
-          {groups
-            .filter((g) => g.options.length > 0)
-            .map((group) => (
-              <FilterSection
-                key={group.id}
-                group={group}
-                defaultOpen={group.key === 'status' || group.options.some((o) => o.checked)}
-                onToggle={onToggle}
-              />
-            ))}
+    <AdaptivePopover
+      title={m.ideas_filters()}
+      className="flex max-h-[min(70vh,36rem)] w-80 flex-col overflow-y-auto p-2"
+      trigger={
+        <IconButton label={label} variant="outline" badge={active || undefined}>
+          <Filter />
+        </IconButton>
+      }
+    >
+      {/* on a phone (drawer) the rows grow for a finger */}
+      <div className="flex flex-col gap-1 max-sm:text-base max-sm:[&_label]:min-h-10">
+        {groups
+          .filter((g) => g.options.length > 0)
+          .map((group) => (
+            <FilterSection
+              key={group.id}
+              group={group}
+              defaultOpen={group.key === 'status' || group.options.some((o) => o.checked)}
+              onToggle={onToggle}
+            />
+          ))}
+      </div>
+      {active > 0 && (
+        <div className="mt-2 border-t border-border px-1 pt-2">
+          <Button variant="ghost" size="sm" className="w-full" onClick={onClear}>
+            {m.ideas_clear_all()}
+          </Button>
         </div>
-        {active > 0 && (
-          <div className="mt-2 border-t border-border px-1 pt-2">
-            <Button variant="ghost" size="sm" className="w-full" onClick={onClear}>
-              {m.ideas_clear_all()}
-            </Button>
-          </div>
-        )}
-      </Popover.Content>
-    </Popover.Root>
+      )}
+    </AdaptivePopover>
   )
 }
 
@@ -452,7 +464,20 @@ function FilterSection({
  * button like the filters (owner's note, round 4: the field took too much room); it opens into the
  * field and folds back when it is left empty.
  */
-function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function SearchBox({
+  value,
+  onChange,
+  results,
+  project,
+}: {
+  value: string
+  onChange: (value: string) => void
+  /** The first ideas found, linked in the phone drawer. */
+  results: { id: string; title: string }[]
+  project: string
+}) {
+  const phone = usePhone()
+  const [drawer, setDrawer] = useState(false)
   const [draft, setDraft] = useState(value)
   const [open, setOpen] = useState(value !== '')
   useEffect(() => {
@@ -465,6 +490,60 @@ function SearchBox({ value, onChange }: { value: string; onChange: (value: strin
     return () => clearTimeout(timer)
   }, [draft, value, onChange])
 
+  // a phone: the search opens in a drawer with a large field and the first ideas found
+  if (phone) {
+    return (
+      <>
+        <IconButton
+          label={m.ideas_search()}
+          variant="outline"
+          badge={value ? '•' : undefined}
+          onClick={() => setDrawer(true)}
+        >
+          <Search />
+        </IconButton>
+        <Drawer.Root open={drawer} onOpenChange={setDrawer}>
+          <Drawer.Content>
+            <Drawer.Title>{m.ideas_search()}</Drawer.Title>
+            <Drawer.Body className="flex flex-col gap-3 pb-6">
+              <InputGroup
+                size="lg"
+                start={<Search />}
+                type="search"
+                autoFocus
+                aria-label={m.ideas_search()}
+                placeholder={m.ideas_search()}
+                value={draft}
+                onChange={(e) => setDraft(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    onChange(draft.trim())
+                    setDrawer(false)
+                  }
+                }}
+              />
+              {draft.trim() && results.length > 0 && (
+                <ul className="flex flex-col gap-1">
+                  {results.map((post) => (
+                    <li key={post.id}>
+                      <Link
+                        to="/$project/ideas/$postId"
+                        params={{ project, postId: post.id }}
+                        onClick={() => setDrawer(false)}
+                        className="squircle flex min-h-12 items-center rounded-control px-3.5 text-base outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="truncate">{post.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Root>
+      </>
+    )
+  }
   if (!open) {
     return (
       <IconButton

@@ -1,15 +1,21 @@
 /**
  * The right-hand panel of a page for people who can manage it (owner's note, #45): moderation on an
  * idea, quick admin actions on the ideas list, … It adds to the page's own controls, never replaces
- * them. It sits in the page's right column (`PageFrame`'s `toc`) and can be hidden (remembered per
- * panel in this browser); hidden, a small button in the same place brings it back. Where the right
- * column folds away (narrow panel, `useWideLayout` false), `SidePanelDrawer` opens the content in a
- * bottom drawer instead; it is rendered in one place only.
+ * them.
+ *
+ * One icon button among the page's controls opens it, on every screen (owner's note, round 7):
+ * - wide (`useWideLayout`): it shows or hides the panel in the page's right column (`PageFrame`'s
+ *   `toc`), remembered per panel in this browser; the button looks pressed while the panel is open;
+ * - narrow: it opens the same content in a drawer from the bottom, with larger touch targets
+ *   (`usePanelTouch`).
+ *
+ * A page calls `useSidePanel(id)` once and hands the result to `SidePanel` (the column) and
+ * `SidePanelButton` (the control).
  */
 import { Drawer, cn } from '@crazy-staff/ui'
-import { PanelRightClose, PanelRightOpen, type LucideIcon } from 'lucide-react'
+import { X, type LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { m } from '../paraglide/messages.js'
 import { IconButton } from './icon-button'
 import { EASE } from './page'
@@ -34,44 +40,57 @@ export function useWideLayout() {
   return wide
 }
 
-/** Hidden or shown, remembered in this browser per panel (storage may be unavailable). */
-function usePanelHidden(id: string) {
+/** Inside the drawer the panel's controls are larger, for a finger. */
+const TouchContext = createContext(false)
+export const usePanelTouch = () => useContext(TouchContext)
+
+export interface SidePanelState {
+  id: string
+  /** The right column is there (else the drawer is used). */
+  wide: boolean
+  /** Shown in the right column (wide screens). */
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+/** Open or closed, remembered in this browser per panel (storage may be unavailable). */
+export function useSidePanel(id: string): SidePanelState {
   const key = `crazy-hub:side-panel:${id}`
-  const [hidden, setHidden] = useState(false)
+  const wide = useWideLayout()
+  const [open, setOpenState] = useState(true)
   useEffect(() => {
     try {
-      setHidden(localStorage.getItem(key) === 'hidden')
+      setOpenState(localStorage.getItem(key) !== 'hidden')
     } catch {
-      // no storage: always shown
+      // no storage: open
     }
   }, [key])
-  const set = (next: boolean) => {
-    setHidden(next)
+  const setOpen = (next: boolean) => {
+    setOpenState(next)
     try {
-      if (next) localStorage.setItem(key, 'hidden')
-      else localStorage.removeItem(key)
+      if (next) localStorage.removeItem(key)
+      else localStorage.setItem(key, 'hidden')
     } catch {
       // no storage: only for this page view
     }
   }
-  return [hidden, set] as const
+  return { id, wide, open, setOpen }
 }
 
+/** The panel in the page's right column; renders nothing on a narrow screen or while closed. */
 export function SidePanel({
-  id,
+  panel,
   title,
   children,
   className,
 }: {
-  /** Names the panel for remembering whether it is hidden. */
-  id: string
+  panel: SidePanelState
   title: string
   children: ReactNode
   className?: string
 }) {
-  const [hidden, setHidden] = usePanelHidden(id)
   const reduce = useReducedMotion()
-  // hiding slides the panel out to the right and fades it; the button to bring it back fades in
+  // opening slides it in from the right with a fade; closing slides it back out
   const motionProps = reduce
     ? {}
     : {
@@ -81,18 +100,8 @@ export function SidePanel({
         transition: { duration: 0.28, ease: EASE },
       }
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      {hidden ? (
-        <motion.div key="show" className="flex justify-end" {...motionProps}>
-          <IconButton
-            label={m.panel_show({ title })}
-            variant="outline"
-            onClick={() => setHidden(false)}
-          >
-            <PanelRightOpen />
-          </IconButton>
-        </motion.div>
-      ) : (
+    <AnimatePresence initial={false}>
+      {panel.wide && panel.open && (
         <motion.section
           key="panel"
           aria-label={title}
@@ -106,14 +115,67 @@ export function SidePanel({
         >
           <header className="-mt-1 -me-1 flex items-center justify-between gap-2">
             <h2 className="text-base font-semibold">{title}</h2>
-            <IconButton label={m.panel_hide()} size="icon-sm" onClick={() => setHidden(true)}>
-              <PanelRightClose />
+            <IconButton label={m.panel_hide()} size="icon-sm" onClick={() => panel.setOpen(false)}>
+              <X />
             </IconButton>
           </header>
           {children}
         </motion.section>
       )}
     </AnimatePresence>
+  )
+}
+
+/**
+ * The control that opens the panel, placed with the page's other icon buttons: on a wide screen it
+ * toggles the right column (pressed while open), on a narrow one it opens the drawer.
+ */
+export function SidePanelButton({
+  panel,
+  title,
+  icon: Icon,
+  variant = 'ghost',
+  children,
+}: {
+  panel: SidePanelState
+  title: string
+  icon: LucideIcon
+  variant?: 'ghost' | 'outline'
+  /** The panel's content, for the drawer. */
+  children: ReactNode
+}) {
+  const [drawer, setDrawer] = useState(false)
+  const pressed = panel.wide && panel.open
+  return (
+    <>
+      <IconButton
+        label={title}
+        variant={variant}
+        aria-pressed={panel.wide ? pressed : undefined}
+        className={cn(pressed && 'border-accent/40 bg-accent-soft text-accent-soft-foreground')}
+        onClick={() => (panel.wide ? panel.setOpen(!panel.open) : setDrawer(true))}
+      >
+        <Icon />
+      </IconButton>
+      {!panel.wide && (
+        <Drawer.Root open={drawer} onOpenChange={setDrawer}>
+          <Drawer.Content>
+            <Drawer.Title>{title}</Drawer.Title>
+            <Drawer.Body>
+              <TouchContext.Provider value>
+                <section
+                  aria-label={title}
+                  // the title already separates: no line above the first block
+                  className="flex flex-col gap-6 pt-2 pb-6 [&>[role=group]:first-child]:border-t-0 [&>[role=group]:first-child]:pt-0"
+                >
+                  {children}
+                </section>
+              </TouchContext.Provider>
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Root>
+      )}
+    </>
   )
 }
 
@@ -134,14 +196,24 @@ export function SidePanelSection({
   children: ReactNode
   className?: string
 }) {
+  const touch = usePanelTouch()
   return (
     <div
       role="group"
       aria-label={label}
-      className={cn('flex flex-col gap-2.5 border-t border-border pt-4', className)}
+      className={cn(
+        'flex flex-col border-t border-border',
+        touch ? 'gap-3 pt-5' : 'gap-2.5 pt-4',
+        className
+      )}
     >
-      <div className="flex min-h-7 items-center gap-2">
-        <span className="flex items-center gap-2 text-xs font-medium text-muted">
+      <div className={cn('flex items-center gap-2', touch ? 'min-h-10' : 'min-h-7')}>
+        <span
+          className={cn(
+            'flex items-center gap-2 font-medium text-muted',
+            touch ? 'text-sm' : 'text-xs'
+          )}
+        >
           <Icon className="size-4" />
           {label}
         </span>
@@ -149,44 +221,5 @@ export function SidePanelSection({
       </div>
       {children}
     </div>
-  )
-}
-
-/**
- * The panel on a narrow screen (owner's note, round 6): an icon button among the page's own controls
- * that opens the same content in a drawer from the bottom, swiped down to close.
- */
-export function SidePanelDrawer({
-  title,
-  icon: Icon,
-  variant = 'ghost',
-  children,
-}: {
-  title: string
-  icon: LucideIcon
-  variant?: 'ghost' | 'outline'
-  children: ReactNode
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <IconButton label={title} variant={variant} onClick={() => setOpen(true)}>
-        <Icon />
-      </IconButton>
-      <Drawer.Root open={open} onOpenChange={setOpen}>
-        <Drawer.Content>
-          <Drawer.Title>{title}</Drawer.Title>
-          <Drawer.Body>
-            <section
-              aria-label={title}
-              // the title already separates: no line above the first block
-              className="flex flex-col gap-5 pt-2 pb-4 [&>[role=group]:first-child]:border-t-0 [&>[role=group]:first-child]:pt-0"
-            >
-              {children}
-            </section>
-          </Drawer.Body>
-        </Drawer.Content>
-      </Drawer.Root>
-    </>
   )
 }

@@ -29,7 +29,7 @@ import { formatDate, useAct } from '../../lib/idea-act'
 import type { HubProject } from '../../lib/projects'
 import { AuthorLink } from '../author-link'
 import { IconButton } from '../icon-button'
-import { SidePanelSection } from '../side-panel'
+import { SidePanelSection, usePanelTouch } from '../side-panel'
 import { TagsDialog } from './tags-dialog'
 import { countComments } from './comments'
 
@@ -84,6 +84,9 @@ export function ModerationPanelContent({
 }) {
   const postId = post.id as string
   const act = useAct(postId)
+  // in the phone drawer: larger controls for a finger
+  const touch = usePanelTouch()
+  const size = touch ? 'lg' : undefined
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -108,6 +111,7 @@ export function ModerationPanelContent({
       {can.status && (
         <SidePanelSection label={m.ideas_status()} icon={CircleDot}>
           <Select
+            size={size}
             aria-label={m.ideas_status()}
             value={post.statusId}
             onValueChange={(next) =>
@@ -125,6 +129,7 @@ export function ModerationPanelContent({
       {can.status && project.boards.length > 1 && (
         <SidePanelSection label={m.ideas_board()} icon={LayoutList}>
           <Select
+            size={size}
             aria-label={m.ideas_board()}
             value={post.board.id}
             onValueChange={(next) =>
@@ -142,7 +147,13 @@ export function ModerationPanelContent({
           label={m.ideas_tags()}
           icon={Tags}
           actions={
-            <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} moderator iconOnly />
+            <TagsDialog
+              postId={postId}
+              current={post.tags.map((t) => t.id)}
+              moderator
+              iconOnly
+              iconSize={touch ? 'icon' : 'icon-sm'}
+            />
           }
         >
           {post.tags.length > 0 ? (
@@ -167,7 +178,7 @@ export function ModerationPanelContent({
             post.pinnedComment ? (
               <IconButton
                 label={m.ideas_unpin()}
-                size="icon-sm"
+                size={touch ? 'icon' : 'icon-sm'}
                 onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
               >
                 <PinOff />
@@ -176,6 +187,8 @@ export function ModerationPanelContent({
           }
         >
           <Switch
+            size={size}
+            className={cn(touch && 'min-h-11')}
             label={
               <span className="flex items-center gap-2">
                 <Lock className="size-4 text-muted" /> {m.ideas_lock_comments()}

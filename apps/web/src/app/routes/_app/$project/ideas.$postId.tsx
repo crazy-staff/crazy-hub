@@ -38,7 +38,7 @@ import { FollowButton } from '../../../components/ideas/follow-button'
 import { Comments } from '../../../components/ideas/comments'
 import { TagsDialog } from '../../../components/ideas/tags-dialog'
 import { ModerationPanelContent } from '../../../components/ideas/moderation-panel'
-import { SidePanel, SidePanelDrawer, useWideLayout } from '../../../components/side-panel'
+import { SidePanel, SidePanelButton, useSidePanel } from '../../../components/side-panel'
 import { errorMessage } from '../../../lib/admin'
 import { formatDate, useAct, useMe } from '../../../lib/idea-act'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
@@ -119,14 +119,13 @@ function Idea() {
       />
     ) : null
 
-  const wide = useWideLayout()
+  const side = useSidePanel('idea-moderation')
 
   return (
     <PageFrame
       toc={
-        wide &&
         panel && (
-          <SidePanel id="idea-moderation" title={m.ideas_moderation()}>
+          <SidePanel panel={side} title={m.ideas_moderation()}>
             {panel}
           </SidePanel>
         )
@@ -142,10 +141,10 @@ function Idea() {
             <ArrowLeft className="size-4" /> {m.ideas_back()}
           </Link>
           {me && <FollowButton postId={post.id} />}
-          {!wide && panel && (
-            <SidePanelDrawer title={m.ideas_moderation()} icon={ShieldCheck}>
+          {panel && (
+            <SidePanelButton panel={side} title={m.ideas_moderation()} icon={ShieldCheck}>
               {panel}
-            </SidePanelDrawer>
+            </SidePanelButton>
           )}
           {/* the author's and the moderators' own buttons stay here; the panel only adds to them */}
           {(mine || can?.delete) && (
