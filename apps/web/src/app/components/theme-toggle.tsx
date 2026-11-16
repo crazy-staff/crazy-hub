@@ -1,9 +1,10 @@
-import { Button, DropdownMenu } from '@crazy-staff/ui'
+import { Button } from '@crazy-staff/ui'
 import { AnimatePresence, motion } from 'motion/react'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { m } from '../paraglide/messages.js'
+import { ChoiceMenu } from './choice-menu'
 
 const THEMES = [
   { value: 'light', icon: Sun, label: m.theme_light },
@@ -21,46 +22,37 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), [])
   const dark = mounted && resolvedTheme === 'dark'
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={m.theme()}
-            title={m.theme()}
-            className="text-muted hover:text-foreground"
-          />
-        }
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={dark ? 'moon' : 'sun'}
-            initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
-            animate={{ rotate: 0, scale: 1, opacity: 1 }}
-            exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="flex"
-          >
-            {dark ? <Moon /> : <Sun />}
-          </motion.span>
-        </AnimatePresence>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" className="min-w-40">
-        <DropdownMenu.Group>
-          <DropdownMenu.GroupLabel>{m.theme()}</DropdownMenu.GroupLabel>
-          <DropdownMenu.RadioGroup
-            value={mounted ? (theme ?? 'system') : undefined}
-            onValueChange={(value) => setTheme(String(value))}
-          >
-            {THEMES.map((option) => (
-              <DropdownMenu.RadioItem key={option.value} value={option.value}>
-                <option.icon /> {option.label()}
-              </DropdownMenu.RadioItem>
-            ))}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Group>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <ChoiceMenu
+      title={m.theme()}
+      trigger={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={m.theme()}
+          title={m.theme()}
+          className="text-muted hover:text-foreground"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={dark ? 'moon' : 'sun'}
+              initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
+              animate={{ rotate: 0, scale: 1, opacity: 1 }}
+              exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="flex"
+            >
+              {dark ? <Moon /> : <Sun />}
+            </motion.span>
+          </AnimatePresence>
+        </Button>
+      }
+      value={mounted ? (theme ?? 'system') : undefined}
+      onValueChange={setTheme}
+      choices={THEMES.map((option) => ({
+        value: option.value,
+        label: option.label(),
+        icon: <option.icon />,
+      }))}
+    />
   )
 }

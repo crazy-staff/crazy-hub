@@ -126,12 +126,12 @@ export async function updateProject(
 }
 
 /** Moves a project one place up or down in the nav. */
-export async function moveProject(id: string, direction: -1 | 1) {
+export async function moveProject(id: string, move: Move) {
   const rows = await db
     .select({ id: crazyProjects.id })
     .from(crazyProjects)
     .orderBy(asc(crazyProjects.position), asc(crazyProjects.name))
-  await reorder(rows, id, direction, (rowId, position) =>
+  await reorder(rows, id, move, (rowId, position) =>
     db.update(crazyProjects).set({ position }).where(eq(crazyProjects.id, rowId))
   )
 }
@@ -181,7 +181,7 @@ export async function deleteDimension(id: string) {
   await db.delete(crazyDimensions).where(eq(crazyDimensions.id, id))
 }
 
-export async function moveDimension(id: string, direction: -1 | 1) {
+export async function moveDimension(id: string, move: Move) {
   const [dimension] = await db
     .select({ projectId: crazyDimensions.projectId })
     .from(crazyDimensions)
@@ -192,7 +192,7 @@ export async function moveDimension(id: string, direction: -1 | 1) {
     .from(crazyDimensions)
     .where(eq(crazyDimensions.projectId, dimension.projectId))
     .orderBy(asc(crazyDimensions.position))
-  await reorder(rows, id, direction, (rowId, position) =>
+  await reorder(rows, id, move, (rowId, position) =>
     db.update(crazyDimensions).set({ position }).where(eq(crazyDimensions.id, rowId))
   )
 }
@@ -227,7 +227,7 @@ export async function deleteDimensionValue(id: string) {
   await db.delete(crazyDimensionValues).where(eq(crazyDimensionValues.id, id))
 }
 
-export async function moveDimensionValue(id: string, direction: -1 | 1) {
+export async function moveDimensionValue(id: string, move: Move) {
   const [value] = await db
     .select({ dimensionId: crazyDimensionValues.dimensionId })
     .from(crazyDimensionValues)
@@ -238,23 +238,29 @@ export async function moveDimensionValue(id: string, direction: -1 | 1) {
     .from(crazyDimensionValues)
     .where(eq(crazyDimensionValues.dimensionId, value.dimensionId))
     .orderBy(asc(crazyDimensionValues.position))
-  await reorder(rows, id, direction, (rowId, position) =>
+  await reorder(rows, id, move, (rowId, position) =>
     db.update(crazyDimensionValues).set({ position }).where(eq(crazyDimensionValues.id, rowId))
   )
 }
 
-/** Swaps a row with its neighbour and renumbers the list 0…n. */
+/**
+ * Where a row goes: one step up or down (`-1`/`1`, the arrow buttons) or straight to an index
+ * (`{ to }`, drag and drop).
+ */
+export type Move = -1 | 1 | { to: number }
+
+/** Moves a row (one step or to an index) and renumbers the list 0…n. */
 async function reorder(
   rows: { id: string }[],
   id: string,
-  direction: -1 | 1,
+  move: Move,
   write: (id: string, position: number) => Promise<unknown>
 ) {
   const ids = rows.map((r) => r.id)
   const from = ids.indexOf(id)
-  const to = from + direction
-  if (from < 0 || to < 0 || to >= ids.length) return
-  ;[ids[from], ids[to]] = [ids[to], ids[from]]
+  const to = typeof move === 'number' ? from + move : move.to
+  if (from < 0 || to < 0 || to >= ids.length || to === from) return
+  ids.splice(to, 0, ...ids.splice(from, 1))
   await Promise.all(ids.map((rowId, position) => write(rowId, position)))
 }
 

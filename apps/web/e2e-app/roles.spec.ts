@@ -88,17 +88,20 @@ test('claim the Owner, give a project role (Discord with 2FA required), edit a p
   await expect(refused.getByRole('alert')).toContainText('no Discord account')
   await refused.getByRole('button', { name: 'Cancel' }).click()
 
+  // the moderator's own row: other tests may give roles to other people at the same time
+  const modRow = page.locator('div').filter({ hasText: modEmail }).last()
+
   // with Discord and 2FA it can
   await linkDiscord(modEmail, true)
   const given = await give()
   await expect(given).toBeHidden()
-  await expect(page.getByText('Moderator · Crazy Gothic Trainer')).toBeVisible()
+  await expect(modRow.getByText('Moderator · Crazy Gothic Trainer')).toBeVisible()
 
   // 2FA off suspends it (the next read of the person sees the cached answer)
   await linkDiscord(modEmail, false)
   await page.reload()
-  await expect(page.getByText('Moderator · Crazy Gothic Trainer')).toBeVisible()
-  await expect(page.getByText('· suspended')).toBeVisible()
+  await expect(modRow.getByText('Moderator · Crazy Gothic Trainer')).toBeVisible()
+  await expect(modRow.getByText('· suspended')).toBeVisible()
 
   // as the Owner, edit a project: add and remove a dimension value (one sign-in for both parts:
   // sign-ins are rate limited)

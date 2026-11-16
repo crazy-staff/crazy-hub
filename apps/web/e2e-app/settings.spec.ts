@@ -31,6 +31,12 @@ test('settings: name, password and two-factor sign-in', async ({ page }) => {
   const email = `settings-${Date.now()}@example.com`
   await signUp(page, email, 'first-password-1')
 
+  // your own profile opens from the account menu, even before any activity
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Your profile' }).click()
+  await expect(page).toHaveURL(/\/u\/principal_/)
+  await expect(page.getByText('Nothing here yet.')).toBeVisible({ timeout: 20_000 })
+
   // profile: rename
   await page.getByRole('button', { name: 'Account menu' }).click()
   await page.getByRole('menuitem', { name: 'Settings' }).click()

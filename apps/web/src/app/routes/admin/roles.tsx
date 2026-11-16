@@ -268,7 +268,11 @@ function GiveRoleDialog({ data, onClose }: { data: RolesAdmin; onClose: () => vo
         )}
       </Field>
       {!person && results.data && results.data.length > 0 && (
-        <div role="listbox" className="-mt-2 flex flex-col rounded-control border border-border">
+        // rounded rows inside a padded list, like a menu (owner's note: the square hover looked off)
+        <div
+          role="listbox"
+          className="squircle -mt-2 flex flex-col gap-0.5 rounded-control border border-border p-1"
+        >
           {results.data.map((found) => (
             <button
               key={found.principalId}
@@ -276,7 +280,7 @@ function GiveRoleDialog({ data, onClose }: { data: RolesAdmin; onClose: () => vo
               role="option"
               aria-selected={false}
               onClick={() => setPerson(found)}
-              className="flex items-center gap-3 px-3 py-2 text-start hover:bg-hover"
+              className="squircle flex cursor-pointer items-center gap-3 rounded-control-sm px-2.5 py-2 text-start outline-none transition-colors hover:bg-hover focus-visible:bg-hover"
             >
               <Avatar size="sm" src={found.avatarUrl ?? undefined} name={found.name} />
               <span className="flex min-w-0 flex-1 flex-col">

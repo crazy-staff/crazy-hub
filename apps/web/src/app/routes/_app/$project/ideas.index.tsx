@@ -12,8 +12,8 @@ import {
   cn,
 } from '@crazy-staff/ui'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router'
-import { Filter, Lightbulb, Plus, Search, X } from 'lucide-react'
+import { createFileRoute, notFound, useNavigate, useRouteContext } from '@tanstack/react-router'
+import { Filter, Lightbulb, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
@@ -28,6 +28,8 @@ import { openSignIn } from '../../../components/auth/auth-dialog'
 import { IDEA_SORTS, groupTags, parseIdeasSearch, type IdeasSearch } from '../../../lib/ideas'
 import { SECTION_META } from '../../../lib/projects'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
+import { IdeasAdminPanelContent } from '../../../components/ideas/ideas-admin-panel'
+import { SidePanel, SidePanelDrawer, useWideLayout } from '../../../components/side-panel'
 
 /**
  * A project's ideas (#5): the posts of its boards, sorted, searched and filtered by status and tags
@@ -149,20 +151,45 @@ function Ideas() {
     setSearch({ [key]: [...list] })
   }
 
+  // quick admin actions in the right column (owner's note, #45)
+  const admin = useRouteContext({
+    from: '__root__',
+    select: (c) => !!c.hub.me?.permissions.includes('projects.manage'),
+  })
+  const adminPanel = admin ? (
+    <IdeasAdminPanelContent
+      project={project}
+      currentBoard={showAll ? undefined : board?.slug}
+      onPickBoard={(slug) => setSearch({ board: slug })}
+    />
+  ) : null
+
+  const wide = useWideLayout()
+
   return (
     <Page
+      toc={
+        wide &&
+        adminPanel && (
+          <SidePanel id="ideas-admin" title={m.ideas_admin_panel()}>
+            {adminPanel}
+          </SidePanel>
+        )
+      }
       title={SECTION_META.ideas.label()}
       description={SECTION_META.ideas.description()}
       actions={
-        project.boards.length > 0 && (
-          <Button
-            onClick={() =>
-              signedIn ? setCreating(true) : void navigate({ to: '.', search: openSignIn })
-            }
-          >
-            <Plus /> {m.ideas_new()}
-          </Button>
-        )
+        <>
+          {project.boards.length > 0 && (
+            <Button
+              onClick={() =>
+                signedIn ? setCreating(true) : void navigate({ to: '.', search: openSignIn })
+              }
+            >
+              <Plus /> {m.ideas_new()}
+            </Button>
+          )}
+        </>
       }
     >
       {project.boards.length > 1 && (
@@ -180,9 +207,11 @@ function Ideas() {
       )}
 
       <div className="mb-8 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ToggleGroup
             variant="ghost"
+            // a little tighter on a phone so the sort and the icon buttons share one row
+            classNames={{ item: 'max-sm:px-2' }}
             aria-label={m.ideas_sort()}
             value={[search.sort ?? 'top']}
             onValueChange={(value) => {
@@ -191,13 +220,21 @@ function Ideas() {
             }}
             items={IDEA_SORTS.map((s) => ({ value: s, label: SORT_LABEL[s]() }))}
           />
-          <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
-          <FilterMenu
-            groups={filterGroups}
-            active={activeFilters}
-            onToggle={toggle}
-            onClear={() => setSearch({ status: [], tag: [] })}
-          />
+          {/* the icon buttons stay together, also when the row wraps on a phone */}
+          <div className="ms-auto flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
+            <SearchBox value={search.q ?? ''} onChange={(q) => setSearch({ q })} />
+            <FilterMenu
+              groups={filterGroups}
+              active={activeFilters}
+              onToggle={toggle}
+              onClear={() => setSearch({ status: [], tag: [] })}
+            />
+            {!wide && adminPanel && (
+              <SidePanelDrawer title={m.ideas_admin_panel()} icon={ShieldCheck} variant="outline">
+                {adminPanel}
+              </SidePanelDrawer>
+            )}
+          </div>
         </div>
         {chips.length > 0 && (
           <div className="flex flex-wrap items-center gap-2" aria-label={m.ideas_filters()}>

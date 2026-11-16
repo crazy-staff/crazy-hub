@@ -177,7 +177,7 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
   await page.getByRole('button', { name: '2 replies' }).click()
   await expect(replies.getByText('Reply to the reply')).toBeVisible()
   // the thread line folds it too
-  await page.getByRole('button', { name: 'Hide or show the replies' }).click()
+  await page.getByRole('button', { name: 'Hide replies' }).click()
   await expect(page.locator('ol ol')).toHaveCount(0)
   await page.getByRole('button', { name: '2 replies' }).click()
 
@@ -196,6 +196,20 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
     .click()
   await expect(page.getByText('Reply to the reply')).toBeHidden()
   await expect(page.getByText('First comment')).toBeVisible()
+
+  // the profile counts the comment and the reply and lists them with what was written
+  await page.getByRole('link', { name: 'Comment Author' }).first().click()
+  await expect(page).toHaveURL(/\/u\/principal_/)
+  // the first visit compiles the route on the dev server
+  await expect(page.getByRole('heading', { level: 1, name: /Comment Author/ })).toBeVisible({
+    timeout: 20_000,
+  })
+  const activity = page.getByRole('list').filter({ hasText: 'Replied in' })
+  await expect(activity.getByText('An edited reply')).toBeVisible()
+  await expect(activity.getByText('Commented on')).toBeVisible()
+  await expect(activity.getByText('Posted an idea')).toBeVisible()
+  await expect(page.getByText('Comments', { exact: true }).locator('..')).toContainText('2')
+  await page.goto(url)
 
   // a moderator of the trainer (role given in the database, Discord faked)
   const mod = await browser.newPage()
@@ -216,14 +230,19 @@ test('comment, reply, edit and delete; a moderator removes a comment and locks c
 
   await mod.goto(url)
   await mod.waitForLoadState('networkidle')
-  await expect(mod.getByText('Moderation')).toBeVisible()
+  // the moderation panel waits for the permission check
+  await expect(mod.getByRole('region', { name: 'Moderation' })).toBeVisible({ timeout: 15_000 })
   // remove the author's comment
   await mod.getByRole('button', { name: 'Comment actions' }).first().click()
   await mod.getByRole('menuitem', { name: 'Remove comment' }).click()
   // a removed comment without replies disappears for everyone outside Quackback's team
   await expect(mod.getByText('First comment')).toBeHidden()
   // lock comments
-  await mod.getByRole('button', { name: 'Lock comments' }).click()
+  // the moderation panel on the right: move the idea to another board, then lock comments
+  await mod.getByRole('combobox', { name: 'Board' }).click()
+  await mod.getByRole('option', { selected: false }).first().click()
+  await expect(mod.getByText('Idea moved.')).toBeVisible()
+  await mod.getByRole('switch', { name: 'Lock comments' }).click()
   await expect(mod.getByText('Comments are locked.')).toBeVisible()
   await mod.close()
   expect(authorEmail).toContain('@')

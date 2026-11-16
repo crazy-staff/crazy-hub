@@ -92,7 +92,14 @@ export function ReactionChips({
 }
 
 /** The icon button with Quackback's fixed set of emojis; sits in the comment's action row. */
-export function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) {
+export function ReactionPicker({
+  picked = [],
+  onPick,
+}: {
+  /** The emojis the viewer already chose: shown pressed, a click takes them back. */
+  picked?: string[]
+  onPick: (emoji: string) => void
+}) {
   const [open, setOpen] = useState(false)
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -109,11 +116,16 @@ export function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) 
             key={emoji}
             type="button"
             aria-label={emoji}
+            aria-pressed={picked.includes(emoji)}
             onClick={() => {
               setOpen(false)
               onPick(emoji)
             }}
-            className="squircle flex size-9 cursor-pointer items-center justify-center rounded-control-sm text-lg outline-none transition-transform hover:scale-110 hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100"
+            className={cn(
+              'squircle flex size-9 cursor-pointer items-center justify-center rounded-control-sm text-lg outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100',
+              // already chosen: an accent tint and ring, as the chip under the comment
+              picked.includes(emoji) ? 'bg-accent-soft ring-1 ring-accent/50' : 'hover:bg-hover'
+            )}
           >
             {emoji}
           </button>

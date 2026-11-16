@@ -44,7 +44,7 @@ export function AppShell({
   return (
     <Sidebar.Provider className="h-svh min-h-0 overflow-hidden" width="17rem">
       {variant === 'admin' ? <AdminSidebar /> : <AppSidebar />}
-      <Sidebar.Inset className="@container isolate min-h-0 overflow-hidden">
+      <Sidebar.Inset data-panel-container="" className="@container isolate min-h-0 overflow-hidden">
         {/* the accent glow, top left of every page */}
         <div
           aria-hidden
@@ -58,6 +58,9 @@ export function AppShell({
     </Sidebar.Provider>
   )
 }
+
+/** On a phone the sidebar is a drawer only as wide as its rows need (owner's note, round 6). */
+const MOBILE_DRAWER = 'w-fit min-w-56 max-w-[min(var(--sidebar-width),calc(100vw-3rem))]'
 
 /** The docs sidebar's collapse button: 32px, 16px icon, the neutral hover of the rows, no press scale. */
 const iconButton = cn(
@@ -135,7 +138,7 @@ function AppSidebar() {
   // outside a project (the start page, settings) the first project is shown
   const project = here.project ?? projects[0]
   return (
-    <Sidebar label={m.nav_label()}>
+    <Sidebar label={m.nav_label()} classNames={{ drawer: MOBILE_DRAWER }}>
       <TitleRow>
         {project ? (
           <ProjectPicker projects={projects} project={project} section={here.section} />
@@ -200,7 +203,7 @@ function AdminSidebar() {
   const isActive = (to: string) =>
     to === '/admin' ? pathname === '/admin' || pathname === '/admin/' : pathname.startsWith(to)
   return (
-    <Sidebar label={m.admin_nav_label()}>
+    <Sidebar label={m.admin_nav_label()} classNames={{ drawer: MOBILE_DRAWER }}>
       <TitleRow>
         <span className="me-auto flex min-w-0 items-center gap-2.5">
           <span className="squircle flex size-7 shrink-0 items-center justify-center rounded-chip bg-accent text-accent-foreground [&_svg]:size-3.5">
@@ -291,7 +294,9 @@ function PanelScroller({ children }: { children: ReactNode }) {
           'relative min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable] [scrollbar-width:thin]',
           // the docs' page geometry (see PageFrame): 760px page + 304px right column, centred together
           '[--page-width:760px] [--toc-width:--spacing(76)] @max-5xl:[--toc-width:0px]',
-          'px-4 md:px-[max(--spacing(6),calc((100%-var(--page-width)-var(--toc-width))/2))] md:pt-14'
+          // the top bar floats over the page at every width, so the page starts under it (owner's
+          // note: on phones the title ran under the bar's buttons)
+          'px-4 pt-14 md:px-[max(--spacing(6),calc((100%-var(--page-width)-var(--toc-width))/2))]'
         )}
       >
         <div className="min-h-full">{children}</div>

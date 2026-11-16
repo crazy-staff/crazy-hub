@@ -24,6 +24,27 @@ export const setIdeaStatusFn = createServerFn({ method: 'POST' })
     await setIdeaStatus(data.postId, data.statusId)
   })
 
+export const moveIdeaFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ postId, boardId: z.string().min(1).max(64) }))
+  .handler(async ({ data }) => {
+    const { moveIdea } = await import('./ideas.service')
+    await moveIdea(data.postId, data.boardId)
+  })
+
+export const editIdeaFn = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      postId,
+      title: z.string().trim().min(1).max(200),
+      content: z.string().max(20000),
+      contentJson: z.unknown().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const { editIdea } = await import('./ideas.service')
+    await editIdea(data.postId, data)
+  })
+
 export const setIdeaTagsFn = createServerFn({ method: 'POST' })
   .validator(z.object({ postId, tagIds: z.array(z.string().min(1).max(64)).max(20) }))
   .handler(async ({ data }) => {
