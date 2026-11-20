@@ -430,3 +430,79 @@ test('similar ideas show while the title is written (any word matches)', async (
   await expect(dialog.getByText('Similar ideas: maybe yours is already here')).toBeVisible()
   await expect(dialog.getByRole('link', { name: /Slack integration/ }).first()).toBeVisible()
 })
+
+test('a moderator merges a duplicate into the first idea and unmerges it', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(180_000)
+  const token = `zq${Date.now().toString(36)}`
+  await signUp(page, 'Merge Author')
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  const first = `E2E first ${token} teleport`
+  await postIdea(page, first)
+  await expect(page.getByRole('heading', { level: 1, name: first })).toBeVisible({
+    timeout: 15_000,
+  })
+  const firstUrl = page.url()
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  const second = `E2E second ${token} teleport`
+  await postIdea(page, second)
+  await expect(page.getByRole('heading', { level: 1, name: second })).toBeVisible({
+    timeout: 15_000,
+  })
+  const secondUrl = page.url()
+
+  // a moderator of the trainer (the seeded Moderator role carries ideas.merge; Discord faked)
+  const mod = await browser.newPage()
+  const modEmail = await signUp(mod, 'Merge Moderator')
+  const [user] =
+    await sql`select u.id as user_id, p.id as principal_id from "user" u join principal p on p.user_id = u.id where u.email = ${modEmail}`
+  const [account] = await sql`
+    insert into account (id, account_id, provider_id, user_id, created_at, updated_at)
+    values (gen_random_uuid(), ${'e2e-' + user.user_id}, 'discord', ${user.user_id}, now(), now())
+    returning updated_at`
+  await sql`
+    insert into crazy_discord_mfa (user_id, discord_account_id, mfa_enabled, checked_at, account_updated_at)
+    values (${user.user_id}, ${'e2e-' + user.user_id}, true, now(), ${account.updated_at})`
+  await sql`
+    insert into crazy_role_assignments (role_id, principal_id, project_id)
+    select r.id, ${user.principal_id}, p.id from crazy_roles r, crazy_projects p
+    where r.slug = 'moderator' and p.slug = 'trainer'`
+
+  // merge the second idea into the first: the search lists the older idea
+  await mod.goto(secondUrl)
+  await mod.waitForLoadState('networkidle')
+  await expect(mod.getByRole('region', { name: 'Moderation' })).toBeVisible({ timeout: 15_000 })
+  await mod.getByRole('button', { name: 'Merge into…' }).click()
+  const dialog = mod.getByRole('dialog', { name: 'Merge into another idea' })
+  await dialog.getByRole('searchbox').fill(token)
+  await dialog.getByRole('radio', { name: new RegExp(first) }).click()
+  await dialog.getByRole('button', { name: 'Merge', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  // the duplicate says where it went; its comments continue there
+  await expect(mod.getByRole('link', { name: first })).toBeVisible()
+  await expect(mod.getByText('Comments are locked.')).toBeVisible()
+
+  // the first idea lists it; the list no longer shows the duplicate
+  await mod.goto(firstUrl)
+  await expect(mod.getByRole('heading', { name: /Merged ideas/ })).toBeVisible()
+  await expect(mod.getByRole('link', { name: new RegExp(second) })).toBeVisible()
+  await mod.goto('/trainer/ideas')
+  await mod.waitForLoadState('networkidle')
+  await mod.getByRole('button', { name: 'Search ideas' }).click()
+  await mod.getByRole('searchbox', { name: 'Search ideas' }).fill(token)
+  await expect(mod.getByRole('link', { name: new RegExp(first) })).toBeVisible()
+  await expect(mod.getByRole('link', { name: new RegExp(second) })).toBeHidden()
+
+  // unmerge from the first idea's list
+  await mod.goto(firstUrl)
+  await mod.getByRole('button', { name: 'Unmerge' }).click()
+  await expect(mod.getByText('The idea stands on its own again.')).toBeVisible()
+  await expect(mod.getByRole('heading', { name: /Merged ideas/ })).toBeHidden()
+  await mod.goto(secondUrl)
+  await expect(mod.getByRole('link', { name: first })).toBeHidden()
+  await mod.close()
+})

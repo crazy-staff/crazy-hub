@@ -1083,7 +1083,7 @@ Key scopes are enforced: an API key holds exactly its stored scopes (owner permi
 
 ## 4. Entry points without a requireAuth/key gate
 
-267 of 1138 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
+271 of 1142 entry points hold no `requireAuth` / `withApiKeyAuth` / `requireTeamAuth` gate.
 Each is expected to be intentionally public, a pre-auth flow, a signature-verified webhook, or a handler that delegates auth (e.g. the MCP route).
 **Adding a row here is an access-control change** — confirm the new entry point is meant to be reachable without a gate.
 
@@ -1115,9 +1115,12 @@ Each is expected to be intentionally public, a pre-auth flow, a signature-verifi
 | `lib/server/crazy/ideas-functions.ts`::editIdeaFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::findSimilarIdeasFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::getIdeaPermissionsFn | server-fn |
+| `lib/server/crazy/ideas-functions.ts`::getMergeCandidatesFn | server-fn |
+| `lib/server/crazy/ideas-functions.ts`::getMergedIdeasFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::getRoleBadgesFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::lockCommentsFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::markdownToContentFn | server-fn |
+| `lib/server/crazy/ideas-functions.ts`::mergeIdeaFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::moveIdeaFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::notifyCommentMentionsFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::pinCommentFn | server-fn |
@@ -1125,6 +1128,7 @@ Each is expected to be intentionally public, a pre-auth flow, a signature-verifi
 | `lib/server/crazy/ideas-functions.ts`::restoreCommentFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::setIdeaStatusFn | server-fn |
 | `lib/server/crazy/ideas-functions.ts`::setIdeaTagsFn | server-fn |
+| `lib/server/crazy/ideas-functions.ts`::unmergeIdeaFn | server-fn |
 | `lib/server/crazy/profile-functions.ts`::getProfileActivityFn | server-fn |
 | `lib/server/crazy/votes-functions.ts`::getIdeaVotesFn | server-fn |
 | `lib/server/crazy/votes-functions.ts`::voteIdeaFn | server-fn |
