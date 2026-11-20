@@ -80,8 +80,12 @@ accounts and tester ranks for the **Crazy Gothic Trainer**. Built on **Quackback
   panel), rendered with **fumadocs-core**. Quackback's help center stays in the code untouched and unused.
   Content is Markdown/MDX stored in the DB; editor is TipTap 3 with markdown round-trip and a source view.
 - i18n: **Paraglide**; languages EN (default), PL, DE, RU.
-- Stack: TanStack Start/Router/Query/Form/Table, valibot, Tailwind 4, Base UI via crazy-ui, motion,
-  lucide, bun.
+- Stack: TanStack Start/Router/Query/Form/Table, valibot, Tailwind 4, crazy-ui (Base UI / UI SDK inside),
+  motion, lucide, bun.
+- **A component the hub needs before crazy-ui has it** is built with **UI SDK** (https://ui-sdk.dev:
+  `@ui-sdk/core` behaviours + `@ui-sdk/react`, pinned; skill `npx skills@latest add vercel-labs/ui --skill
+  ui-sdk`), styled with crazy-ui tokens and `tv()`, in the library's shape (compound + one-line form), and
+  moved into crazy-ui when finished (decision 14). Never hand-roll focus/keyboard/popup behaviour.
 - Tests: Vitest, Playwright e2e for the main paths (sign in, post an idea, vote, moderate, edit a docs
   page), visual tests of key pages, CI gate.
 - Hosting: decided at the start of the hub phase. Needs Postgres + pgvector, S3-compatible storage and a
