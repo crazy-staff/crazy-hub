@@ -278,3 +278,65 @@ test('closing the form with changes asks first; deleting an idea leaves its page
   await expect(page).toHaveURL(/\/trainer\/ideas$/)
   await expect(page.getByText(title)).toBeHidden()
 })
+
+test('mention someone in a comment: suggestions, a profile link and a notification', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000)
+  // the person to mention, with a name nobody else has; they posted an idea (a profile without any
+  // activity stays hidden, as in Quackback)
+  const token = Date.now().toString(36)
+  const name = `Mentionee ${token}`
+  const other = await browser.newContext()
+  const otherPage = await other.newPage()
+  await signUp(otherPage, name)
+  await otherPage.goto('/trainer/ideas')
+  await otherPage.waitForLoadState('networkidle')
+  await postIdea(otherPage, `E2E mentionee ${token}`)
+  await expect(otherPage).toHaveURL(/\/trainer\/ideas\/post_/, { timeout: 15_000 })
+  await other.close()
+
+  await signUp(page, 'Mention Author')
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  const title = `E2E mentions ${Date.now()}`
+  await postIdea(page, title)
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
+    timeout: 15_000,
+  })
+
+  // typing @ and part of the name lists the person; Enter picks them
+  const composer = page.locator('textarea[aria-label="Comment"]')
+  await composer.click()
+  await composer.pressSequentially(`Thanks @mentionee ${token}`)
+  const option = page.getByRole('option', { name })
+  await expect(option).toBeVisible()
+  await expect(composer).toHaveAttribute('aria-expanded', 'true')
+  await composer.press('Enter')
+  await expect(composer).toHaveValue(new RegExp(`^Thanks \\[@${name}\\]\\(/u/principal_\\w+\\) $`))
+  await expect(page.getByRole('listbox', { name: 'People' })).toBeHidden()
+  await composer.pressSequentially('for the idea')
+  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+
+  // the posted comment links to the profile
+  const mention = page.locator('ol a.mention', { hasText: `@${name}` })
+  await expect(mention).toBeVisible()
+  await expect(mention).toHaveAttribute('href', /^\/u\/principal_/)
+  await mention.click()
+  await expect(page).toHaveURL(/\/u\/principal_/)
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+
+  // the mentioned person got an in-app notification, once
+  await expect
+    .poll(
+      async () =>
+        (
+          await sql`
+            select count(*)::int as n from in_app_notifications n
+            join principal p on p.id = n.principal_id
+            where p.display_name = ${name} and n.type = 'comment_mentioned'`
+        )[0]?.n
+    )
+    .toBe(1)
+})
