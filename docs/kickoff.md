@@ -90,6 +90,11 @@ reinvent them:
   button floats bottom right; management panels open from an icon button among the page's controls
   (`components/side-panel.tsx`: column on wide screens, drawer with touch sizes on narrow ones).
   Full rule: crazy-ui `docs/guidelines.md` → _Mobile_.
+- Suggestions while typing (2026-11-20, #5 mentions): a list that answers what is being typed (people
+  for `@`) opens inside the field, right under the text, on every screen size — never a drawer or a
+  floating popup, which would cover the text or close the phone keyboard. The field keeps the focus;
+  arrows move, Enter/Tab pick, Escape closes; rows are 40px, 48px on phones. Full rule: crazy-ui
+  `docs/guidelines.md` → _Mobile_.
 - **Keep the design rules current**: when the owner settles a design question in a review, write the
   rule into crazy-ui `docs/guidelines.md` and this list in the same change.
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list

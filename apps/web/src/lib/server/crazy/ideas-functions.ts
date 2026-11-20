@@ -94,9 +94,21 @@ export const lockCommentsFn = createServerFn({ method: 'POST' })
 export const markdownToContentFn = createServerFn({ method: 'POST' })
   .validator(z.object({ markdown: z.string().max(10000) }))
   .handler(async ({ data }) => {
-    const [{ markdownToTiptapJson }, { sanitizeTiptapContent }] = await Promise.all([
-      import('@/lib/server/markdown-tiptap'),
-      import('@/lib/server/sanitize-tiptap'),
-    ])
-    return sanitizeTiptapContent(markdownToTiptapJson(data.markdown))
+    const [{ markdownToTiptapJson }, { sanitizeTiptapContent }, { linksToMentions }] =
+      await Promise.all([
+        import('@/lib/server/markdown-tiptap'),
+        import('@/lib/server/sanitize-tiptap'),
+        import('@/lib/shared/crazy/mentions'),
+      ])
+    // `[@Name](/u/principal_…)` links become mention nodes (notifications, live names)
+    const parsed = markdownToTiptapJson(data.markdown)
+    return sanitizeTiptapContent(linksToMentions(parsed) as typeof parsed)
+  })
+
+/** Tells the people mentioned in the caller's own comment, once per comment (after posting or editing). */
+export const notifyCommentMentionsFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ commentId }))
+  .handler(async ({ data }) => {
+    const { notifyCommentMentions } = await import('./mentions.service')
+    return notifyCommentMentions(data.commentId)
   })

@@ -2,6 +2,7 @@
  * The text field of ideas and comments (#5): markdown with a toolbar (bold, italic, heading, lists,
  * quote, code, link, image upload) and a preview tab. The server turns the markdown into the rich text
  * Quackback stores (`markdownToContentFn`), so ideas read as formatted text, not a wall of characters.
+ * Typing `@` suggests people; a pick writes a mention link (`lib/shared/crazy/mentions.ts`).
  */
 import { Label, Prose, Tabs, Textarea, cn, toast } from '@crazy-staff/ui'
 import {
@@ -17,10 +18,14 @@ import {
   Quote,
   type LucideIcon,
 } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { useId, useRef, useState, type ComponentProps } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { insertMention, mentionQueryAt, mentionTarget } from '@/lib/shared/crazy/mentions'
 import { m } from '../../paraglide/messages.js'
+import { MentionSuggestions, useMentionPeople, type MentionPerson } from './mention-suggestions'
+import { MENTION_CLASS } from './rich-text'
 
 type Edit = (
   text: string,
@@ -73,11 +78,35 @@ async function uploadImage(file: File): Promise<string> {
   return result.publicUrl
 }
 
+/** Links of the preview: a mention opens the profile inside the app, others stay links. */
+function PreviewLink({
+  href,
+  children,
+  node: _node,
+  ...props
+}: ComponentProps<'a'> & { node?: unknown }) {
+  const principalId = mentionTarget(href)
+  if (principalId && String(children).startsWith('@')) {
+    return (
+      <Link to="/u/$principalId" params={{ principalId }} className={MENTION_CLASS}>
+        {children}
+      </Link>
+    )
+  }
+  return (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  )
+}
+
 /** Markdown rendered the way the stored idea will look (preview tab, wizard review). */
 export function MarkdownView({ value, className }: { value: string; className?: string }) {
   return (
     <Prose size="sm" className={cn('max-w-none', className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: PreviewLink }}>
+        {value}
+      </ReactMarkdown>
     </Prose>
   )
 }
@@ -115,6 +144,42 @@ export function MarkdownEditor({
   const file = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState('write')
   const [uploading, setUploading] = useState(false)
+  // the @-mention at the caret, and the one the person closed with Escape (by its position)
+  const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
+  const [dismissed, setDismissed] = useState<number | null>(null)
+  const [active, setActive] = useState(0)
+  const open = mention !== null && mention.start !== dismissed
+  const { people, loading, ready } = useMentionPeople(open ? mention.query : null)
+  const listId = `${id}-mentions`
+
+  /** Reads the mention being typed at the caret (after typing, clicking or moving the caret). */
+  const track = (el: HTMLTextAreaElement) => {
+    const found =
+      el.selectionStart === el.selectionEnd ? mentionQueryAt(el.value, el.selectionStart) : null
+    if (found?.start !== mention?.start || found?.query !== mention?.query) {
+      setMention(found)
+      setActive(0)
+    }
+    if (!found) setDismissed(null)
+  }
+
+  const pick = (person: MentionPerson) => {
+    const el = ref.current
+    if (!el || !mention || !person.displayName) return
+    const next = insertMention(
+      value,
+      mention.start,
+      el.selectionStart,
+      person.principalId,
+      person.displayName
+    )
+    onChange(next.text)
+    setMention(null)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(next.caret, next.caret)
+    })
+  }
 
   const apply = (edit: Edit) => {
     const el = ref.current
@@ -220,7 +285,33 @@ export function MarkdownEditor({
           maxLength={maxLength}
           autoFocus={autoFocus}
           value={value}
-          onChange={(e) => onChange(e.currentTarget.value)}
+          role={open ? 'combobox' : undefined}
+          aria-expanded={open || undefined}
+          aria-controls={open ? listId : undefined}
+          aria-autocomplete={open ? 'list' : undefined}
+          aria-activedescendant={open && people.length > 0 ? `${listId}-${active}` : undefined}
+          onChange={(e) => {
+            onChange(e.currentTarget.value)
+            track(e.currentTarget)
+          }}
+          onSelect={(e) => track(e.currentTarget)}
+          onBlur={() => setMention(null)}
+          onKeyDown={(e) => {
+            if (!open) return
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              e.stopPropagation()
+              setDismissed(mention.start)
+            } else if (people.length > 0 && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+              e.preventDefault()
+              const step = e.key === 'ArrowDown' ? 1 : -1
+              setActive((i) => (i + step + people.length) % people.length)
+            } else if (people.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+              e.preventDefault()
+              // a list still loading for what was just typed: wait instead of picking a stale row
+              if (ready) pick(people[Math.min(active, people.length - 1)]!)
+            }
+          }}
           onPaste={(e) => {
             const pasted = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'))
             if (pasted) {
@@ -238,6 +329,16 @@ export function MarkdownEditor({
             <p className="text-sm text-muted">{m.editor_nothing()}</p>
           )}
         </div>
+      )}
+      {tab === 'write' && open && (
+        <MentionSuggestions
+          id={listId}
+          people={people}
+          loading={loading}
+          active={active}
+          onHover={setActive}
+          onPick={pick}
+        />
       )}
     </div>
   )

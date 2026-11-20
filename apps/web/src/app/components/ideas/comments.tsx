@@ -32,6 +32,7 @@ import {
 } from '@/lib/server/functions/comments'
 import {
   markdownToContentFn,
+  notifyCommentMentionsFn,
   pinCommentFn,
   removeCommentFn,
   restoreCommentFn,
@@ -163,7 +164,7 @@ function CommentComposer({
     setBusy(true)
     const ok = await act(async () => {
       const contentJson = await markdownToContentFn({ data: { markdown } })
-      await createCommentFn({
+      const created = await createCommentFn({
         data: {
           postId: postId as PostId,
           content: markdown,
@@ -171,6 +172,7 @@ function CommentComposer({
           parentId: parentId as PostCommentId | undefined,
         },
       })
+      notifyMentions(markdown, created.comment.id)
     })
     setBusy(false)
     if (ok) {
@@ -527,6 +529,7 @@ function EditComment({
                   contentJson: contentJson as never,
                 },
               })
+              notifyMentions(markdown, commentId)
             })
             if (ok) onDone()
           }}
@@ -536,6 +539,15 @@ function EditComment({
       </div>
     </div>
   )
+}
+
+/**
+ * Tells the people mentioned in a comment just posted or edited (Quackback only does it for posts).
+ * Runs in the background: a failure never blocks the comment.
+ */
+function notifyMentions(markdown: string, commentId: string) {
+  if (!markdown.includes('](/u/principal_')) return
+  notifyCommentMentionsFn({ data: { commentId } }).catch(() => {})
 }
 
 const replies = (c: PublicCommentView) => (c.replies ?? []) as PublicCommentView[]
