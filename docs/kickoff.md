@@ -78,6 +78,9 @@ reinvent them:
   shapes use `squircle-motion`.
 - Pointer cursor on everything clickable; gentle press; motion only on transform/opacity with reduced
   motion respected.
+- Names and states (2026-11-20, #5): public role badges are small soft chips right after the name (like
+  "Team"); something only its author sees until a moderator approves it carries a warning chip
+  ("Waiting for review") or, for a whole idea, a warning alert above its text.
 - Declutter (owner, 2026-11-15): no text where an icon carries the meaning (icon-only buttons with
   `aria-label` + tooltip, counts in badges), generous whitespace, controls in one row share one size,
   no outline around an already clear group. Full rule: crazy-ui `docs/guidelines.md` → _Declutter_.

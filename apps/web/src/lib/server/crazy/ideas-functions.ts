@@ -17,6 +17,30 @@ export const getIdeaPermissionsFn = createServerFn({ method: 'GET' })
     return ideaPermissions(data.postId)
   })
 
+/**
+ * Public role badges of the people on an idea's page (its author and commenters), global roles and
+ * those of the idea's project. Public information: anyone who can see the names sees the badges.
+ */
+export const getRoleBadgesFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ postId, principalIds: z.array(z.string().min(1).max(64)).max(200) }))
+  .handler(async ({ data }) => {
+    const [{ roleBadges }, { projectOfPost }] = await Promise.all([
+      import('./badges.service'),
+      import('./ideas.service'),
+    ])
+    return roleBadges(await projectOfPost(data.postId), data.principalIds)
+  })
+
+/** Ideas of a project like the title being written (the composer's "maybe yours is already here"). */
+export const findSimilarIdeasFn = createServerFn({ method: 'GET' })
+  .validator(z.object({ project: z.string().min(1).max(64), title: z.string().min(3).max(200) }))
+  .handler(async ({ data }) => {
+    const { resolvePortalAccessForRequest } = await import('@/lib/server/functions/portal-access')
+    if (!(await resolvePortalAccessForRequest()).granted) return []
+    const { similarIdeas } = await import('./similar.service')
+    return similarIdeas(data.project, data.title)
+  })
+
 export const setIdeaStatusFn = createServerFn({ method: 'POST' })
   .validator(z.object({ postId, statusId: z.string().min(1).max(64) }))
   .handler(async ({ data }) => {
