@@ -44,6 +44,7 @@ import { AuthorLink } from '../author-link'
 import { openSignIn } from '../auth/auth-dialog'
 import { MarkdownEditor } from './markdown-editor'
 import { RichText } from './rich-text'
+import { RoleBadges } from './role-badges'
 import { ReactionChips, ReactionPicker, useReactions } from './reactions'
 
 /** Which threads are folded (kept by `Comments`, so it survives refetches while on the page). */
@@ -345,7 +346,14 @@ function CommentItem({
               {m.ideas_team()}
             </Chip>
           )}
+          <RoleBadges principalId={comment.principalId} />
           <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
+          {comment.moderationState === 'pending' && !removed && (
+            // held for review: only its author (and moderators) see it until it is approved
+            <Chip size="sm" variant="warning" title={m.ideas_comment_held_hint()}>
+              {m.ideas_comment_held()}
+            </Chip>
+          )}
           {(mine || moderator) && (
             <AdaptiveMenu
               title={m.ideas_comment_actions()}

@@ -44,7 +44,10 @@ export interface Assignment {
   projectId: string | null
 }
 
-export function isAssignmentActive(role: RoleInfo, discord: DiscordStatus): boolean {
+export function isAssignmentActive(
+  role: Pick<RoleInfo, 'requiresDiscordMfa'>,
+  discord: DiscordStatus
+): boolean {
   return !role.requiresDiscordMfa || discord === 'ok'
 }
 

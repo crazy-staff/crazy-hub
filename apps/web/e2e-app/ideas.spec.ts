@@ -340,3 +340,93 @@ test('mention someone in a comment: suggestions, a profile link and a notificati
     )
     .toBe(1)
 })
+
+test('public role badges next to names; a role that needs Discord 2FA stays hidden without it', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  const token = Date.now().toString(36)
+  const name = `Badge Person ${token}`
+  await signUp(page, name)
+  // two public global roles: one without the Discord requirement, one with it (not met here)
+  await sql`
+    insert into crazy_roles (category_id, slug, name, scope, is_public, requires_discord_mfa, position)
+    select id, ${`e2e-supporter-${token}`}, ${`Supporter ${token}`}, 'global', true, false, 90
+    from crazy_role_categories where slug = 'testing'`
+  await sql`
+    insert into crazy_roles (category_id, slug, name, scope, is_public, requires_discord_mfa, position)
+    select id, ${`e2e-veteran-${token}`}, ${`Veteran ${token}`}, 'global', true, true, 91
+    from crazy_role_categories where slug = 'testing'`
+  await sql`
+    insert into crazy_role_assignments (role_id, principal_id)
+    select r.id, p.id from crazy_roles r, principal p
+    where r.slug in (${`e2e-supporter-${token}`}, ${`e2e-veteran-${token}`})
+      and p.display_name = ${name}`
+
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  const title = `E2E badges ${Date.now()}`
+  await postIdea(page, title)
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
+    timeout: 15_000,
+  })
+  await page.locator('textarea[aria-label="Comment"]').fill('A comment with a badge.')
+  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+  await expect(page.getByText('A comment with a badge.')).toBeVisible()
+
+  // by the idea's author and by the comment's author
+  await expect(page.locator(`[data-role-badge="e2e-supporter-${token}"]`)).toHaveCount(2)
+  await expect(page.locator(`[data-role-badge="e2e-veteran-${token}"]`)).toHaveCount(0)
+})
+
+test('held for review: an idea and a comment with a link wait for a moderator, and say so', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  // the workspace holds posts and comments with external links (settings are cached for 5s)
+  const [before] = await sql`select portal_config from settings limit 1`
+  const config = JSON.parse(before?.portal_config || '{}')
+  const held = {
+    ...config,
+    moderationDefault: { requireApproval: 'none', ...config.moderationDefault, holdLinks: true },
+  }
+  const reset = async (value: string | null) => {
+    await sql`update settings set portal_config = ${value}`
+    await sql`delete from kv_store where key like 'settings:%'`
+  }
+  await reset(JSON.stringify(held))
+  try {
+    await page.waitForTimeout(6_000)
+    await signUp(page, 'Held Author')
+    await page.goto('/trainer/ideas')
+    await page.waitForLoadState('networkidle')
+    const title = `E2E held ${Date.now()}`
+    await postIdea(page, title, 'See https://example.com/held for details.')
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.locator('article').getByText('Waiting for review').first()).toBeVisible()
+
+    await page.locator('textarea[aria-label="Comment"]').fill('More at https://example.com/more')
+    await page.getByRole('button', { name: 'Comment', exact: true }).click()
+    const comment = page.locator('li', { hasText: 'More at' }).first()
+    await expect(comment.getByText('Waiting for review')).toBeVisible()
+  } finally {
+    await reset(before?.portal_config ?? null)
+  }
+})
+
+test('similar ideas show while the title is written (any word matches)', async ({ page }) => {
+  test.setTimeout(60_000)
+  await signUp(page, 'Similar Writer')
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: 'Post an idea' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Post an idea' })
+  await dialog.getByRole('radio', { name: /An idea/ }).click()
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  // the demo seed has "Slack integration"
+  await dialog.getByLabel('Title').fill('Slack notifications')
+  await expect(dialog.getByText('Similar ideas: maybe yours is already here')).toBeVisible()
+  await expect(dialog.getByRole('link', { name: /Slack integration/ }).first()).toBeVisible()
+})
