@@ -90,11 +90,11 @@ reinvent them:
   button floats bottom right; management panels open from an icon button among the page's controls
   (`components/side-panel.tsx`: column on wide screens, drawer with touch sizes on narrow ones).
   Full rule: crazy-ui `docs/guidelines.md` → _Mobile_.
+- **Keep the design rules current**: when the owner settles a design question in a review, write the
+  rule into crazy-ui `docs/guidelines.md` and this list in the same change.
 - Session ended (2026-11-20, #5): a change that fails because the session ended shows no error toast;
   the sign-in dialog opens over the same page as "Sign in again" with the e-mail filled in, and unsent
   text (comments, edits) is kept in the tab (`lib/drafts.ts`) so nothing typed is lost.
-- **Keep the design rules current**: when the owner settles a design question in a review, write the
-  rule into crazy-ui `docs/guidelines.md` and this list in the same change.
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list
   every change with the page/link where it can be seen.
 
