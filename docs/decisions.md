@@ -96,3 +96,12 @@ Settled in the planning conversation of 2026-11-13 (owner + Claude). Supersede b
       hub-linked Discord roles, Discord-only roles like cosmetic ones stay with the server's admins and
       mods), and an "Apply for alpha" form (#26; until then the role is given in the admin).
     - Built first in #22 (projects, dimensions, roles), before the feedback list (#5).
+
+14. **Components the hub builds first use UI SDK (2026-11-20, owner).** crazy-ui builds every new or
+    rebuilt component with **UI SDK** (https://ui-sdk.dev; crazy-ui decision 18). When the hub needs a
+    component before crazy-ui has it (a local one in `apps/web/src/app/components/`), it is built the same
+    way: behaviours from `@ui-sdk/core` rendered with `@ui-sdk/react` (pinned exact versions), styled
+    with crazy-ui's tokens and `tv()`, compound parts + one-line form, so it can move into crazy-ui as is.
+    When the work on it is done, it is ported to crazy-ui (with a showcase page and tests) and the hub
+    switches to the library version.
+
