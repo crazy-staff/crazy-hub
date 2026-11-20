@@ -29,6 +29,7 @@ import { COMMON, navItemOf, sectionPath } from '../lib/nav'
 import { SECTION_META, locate, useProjects } from '../lib/projects'
 import { AccountMenu } from './account-menu'
 import { AuthDialog } from './auth/auth-dialog'
+import { SessionWatch } from './auth/session-watch'
 import { LanguageMenu } from './language-menu'
 import { ProjectPicker } from './project-picker'
 import { ThemeToggle } from './theme-toggle'
@@ -55,8 +56,9 @@ export function AppShell({
         <PanelScroller>{children}</PanelScroller>
         <MenuFab />
       </Sidebar.Inset>
-      {/* opens on ?auth=signin|signup from any page */}
+      {/* opens on ?auth=signin|signup from any page; "sign in again" when the session ends */}
       <AuthDialog />
+      <SessionWatch />
     </Sidebar.Provider>
   )
 }

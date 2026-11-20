@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { routeTree } from './routeTree.gen'
@@ -6,11 +6,14 @@ import { ErrorPage, NotFoundPage } from './components/error-page'
 import { PageSkeleton } from './components/page-skeleton'
 import { expireRouteContextOnInvalidate } from '@/lib/client/route-context-memo'
 import { createAutosaveMutationCache } from '@/lib/client/autosave'
+import { noticeSessionError } from './lib/session'
 
 /** The router of crazy-hub (Quackback's `src/router.tsx` stays unused, see `routes.ts`). */
 export function getRouter() {
   const queryClient = new QueryClient({
     mutationCache: createAutosaveMutationCache(),
+    // a query refused for want of a session opens "sign in again" (only for someone who was signed in)
+    queryCache: new QueryCache({ onError: (err) => void noticeSessionError(err) }),
     defaultOptions: {
       queries: {
         staleTime: 30 * 1000,
