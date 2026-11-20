@@ -33,8 +33,8 @@ import { NewBoardDialog } from '../../../components/admin/new-board-dialog'
 import { SortableList } from '../../../components/admin/sortable'
 import {
   adminQueries,
-  errorMessage,
   slugify,
+  toastError,
   type DimensionAdmin,
   type ProjectAdmin,
   type ProjectsAdmin,
@@ -81,7 +81,7 @@ function useAction() {
       await refresh()
       if (success) toast.success(success)
     } catch (err) {
-      toast.error(errorMessage(err))
+      toastError(err)
     }
   }
 }

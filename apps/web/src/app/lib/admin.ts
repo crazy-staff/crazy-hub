@@ -1,11 +1,13 @@
 /**
  * Queries and helpers of the admin editors for projects and roles (decision 13, #22).
  */
+import { toast } from '@crazy-staff/ui'
 import { queryOptions } from '@tanstack/react-query'
 import { listProjectsAdminFn, listRolesAdminFn } from '@/lib/server/crazy/admin-functions'
 import type { CrazyPermission } from '@/lib/shared/crazy/permissions'
 import type { DiscordStatus } from '@/lib/shared/crazy/roles'
 import { m } from '../paraglide/messages.js'
+import { noticeSessionError } from './session'
 
 export const adminQueries = {
   projects: () =>
@@ -53,8 +55,19 @@ const ERRORS: Record<string, () => string> = {
   'idea-has-engagement': m.error_idea_has_engagement,
 }
 
+/**
+ * Shows a failed change as a toast. When the session ended there is no toast: "sign in again" opens
+ * instead and says it.
+ */
+export function toastError(err: unknown) {
+  if (noticeSessionError(err)) return
+  toast.error(errorMessage(err))
+}
+
 /** The message for an error a crazy-hub server function threw (its reason code), or a generic one. */
 export function errorMessage(err: unknown): string {
+  // the session ended: "sign in again" opens over the page (lib/session.ts)
+  if (noticeSessionError(err)) return m.session_ended()
   const text = err instanceof Error ? err.message : String(err)
   const reason = Object.keys(ERRORS).find((key) => text.includes(key))
   return reason ? ERRORS[reason]() : m.auth_error_generic()

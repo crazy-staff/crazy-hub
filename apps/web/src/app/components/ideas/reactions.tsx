@@ -3,7 +3,7 @@
  * when the viewer reacted, the names in a tooltip) and a picker in the comment's action row with
  * Quackback's fixed set of emojis. Optimistic; the idea refetches afterwards.
  */
-import { Drawer, Popover, Tooltip, cn, toast } from '@crazy-staff/ui'
+import { Drawer, Popover, Tooltip, cn } from '@crazy-staff/ui'
 import { usePhone } from '../../lib/use-phone'
 import { useQueryClient } from '@tanstack/react-query'
 import { SmilePlus } from 'lucide-react'
@@ -13,7 +13,7 @@ import type { CommentReactionCount } from '@/lib/shared/comment-tree'
 import { REACTION_EMOJIS } from '@/lib/shared/db-types'
 import { addReactionFn, removeReactionFn } from '@/lib/server/functions/comments'
 import { m } from '../../paraglide/messages.js'
-import { errorMessage } from '../../lib/admin'
+import { toastError } from '../../lib/admin'
 import { IconButton } from '../icon-button'
 
 /** The reactions after the viewer toggles `emoji` (pure, for the optimistic update). */
@@ -45,7 +45,7 @@ export function useReactions(postId: string, commentId: string, reactions: Comme
       void queryClient.invalidateQueries({ queryKey: ['portal', 'post', postId] })
     } catch (err) {
       setShown(before)
-      toast.error(errorMessage(err))
+      toastError(err)
     }
   }
   return { shown, toggle }
