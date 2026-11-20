@@ -3,13 +3,14 @@
  * and delete buttons: the idea at a glance (votes for / against, comments, author), then status,
  * board, tags and comments, icon-first with few words. What shows depends on the caller's
  * permissions in the idea's project (decision 13): `ideas.status` (status and board), `ideas.tags`,
- * `comments.moderate` (lock, official response), `ideas.delete`.
+ * `ideas.merge` (merge duplicates, #37), `comments.moderate` (lock, official response), `ideas.delete`.
  */
-import { Avatar, Chip, Select, Switch, Tooltip, cn } from '@crazy-staff/ui'
+import { Avatar, Button, Chip, Select, Switch, Tooltip, cn } from '@crazy-staff/ui'
 import {
   ArrowDown,
   ArrowUp,
   CircleDot,
+  GitMerge,
   LayoutList,
   Lock,
   MessageSquare,
@@ -23,13 +24,16 @@ import {
   moveIdeaFn,
   pinCommentFn,
   setIdeaStatusFn,
+  unmergeIdeaFn,
 } from '@/lib/server/crazy/ideas-functions'
+import { useState } from 'react'
 import { m } from '../../paraglide/messages.js'
 import { formatDate, useAct } from '../../lib/idea-act'
 import type { HubProject } from '../../lib/projects'
 import { AuthorLink } from '../author-link'
 import { IconButton } from '../icon-button'
 import { SidePanelSection, usePanelTouch } from '../side-panel'
+import { MergeDialog } from './merge-dialog'
 import { TagsDialog } from './tags-dialog'
 import { countComments } from './comments'
 
@@ -37,6 +41,7 @@ export interface IdeaPermissions {
   status: boolean
   tags: boolean
   delete: boolean
+  merge: boolean
   comments: boolean
 }
 
@@ -87,6 +92,7 @@ export function ModerationPanelContent({
   // in the phone drawer: larger controls for a finger
   const touch = usePanelTouch()
   const size = touch ? 'lg' : undefined
+  const [merging, setMerging] = useState<'into' | 'here' | null>(null)
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -170,6 +176,50 @@ export function ModerationPanelContent({
         </SidePanelSection>
       )}
 
+      {can.merge && (
+        <SidePanelSection label={m.merge_section()} icon={GitMerge}>
+          <div className="flex flex-col gap-2">
+            {post.mergeInfo ? (
+              <Button
+                variant="outline"
+                size={touch ? 'md' : 'sm'}
+                onClick={() =>
+                  void act(() => unmergeIdeaFn({ data: { postId } }), m.merge_unmerged())
+                }
+              >
+                {m.merge_unmerge()}
+              </Button>
+            ) : (
+              <>
+                {!post.mergedPostCount && (
+                  <Button
+                    variant="outline"
+                    size={touch ? 'md' : 'sm'}
+                    onClick={() => setMerging('into')}
+                  >
+                    {m.merge_into()}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size={touch ? 'md' : 'sm'}
+                  onClick={() => setMerging('here')}
+                >
+                  {m.merge_here()}
+                </Button>
+              </>
+            )}
+          </div>
+          {merging && (
+            <MergeDialog
+              postId={postId}
+              direction={merging}
+              onClose={() => setMerging(null)}
+              onMerged={() => act(async () => {}, m.merge_done())}
+            />
+          )}
+        </SidePanelSection>
+      )}
       {can.comments && (
         <SidePanelSection
           label={m.ideas_comments()}

@@ -72,6 +72,7 @@ export async function ideaPermissions(postId: string) {
     status: granted.has('ideas.status'),
     tags: granted.has('ideas.tags'),
     delete: granted.has('ideas.delete'),
+    merge: granted.has('ideas.merge'),
     comments: granted.has('comments.moderate'),
   }
 }

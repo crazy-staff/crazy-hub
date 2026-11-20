@@ -41,6 +41,40 @@ export const findSimilarIdeasFn = createServerFn({ method: 'GET' })
     return similarIdeas(data.project, data.title)
   })
 
+/** Merges a duplicate idea into the canonical one (#37). */
+export const mergeIdeaFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ postId, canonicalId: postId }))
+  .handler(async ({ data }) => {
+    const { mergeIdea } = await import('./merge.service')
+    await mergeIdea(data.postId, data.canonicalId)
+  })
+
+/** Restores a merged idea (#37). */
+export const unmergeIdeaFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ postId }))
+  .handler(async ({ data }) => {
+    const { unmergeIdea } = await import('./merge.service')
+    await unmergeIdea(data.postId)
+  })
+
+/** The ideas merged into this one (#37). */
+export const getMergedIdeasFn = createServerFn({ method: 'GET' })
+  .validator(z.object({ postId }))
+  .handler(async ({ data }) => {
+    const { resolvePortalAccessForRequest } = await import('@/lib/server/functions/portal-access')
+    if (!(await resolvePortalAccessForRequest()).granted) return []
+    const { mergedIdeas } = await import('./merge.service')
+    return mergedIdeas(data.postId)
+  })
+
+/** Ideas to merge with, oldest first (#37; moderators with `ideas.merge`). */
+export const getMergeCandidatesFn = createServerFn({ method: 'GET' })
+  .validator(z.object({ postId, query: z.string().max(200), direction: z.enum(['into', 'here']) }))
+  .handler(async ({ data }) => {
+    const { mergeCandidates } = await import('./merge.service')
+    return mergeCandidates(data.postId, data.query, data.direction)
+  })
+
 export const setIdeaStatusFn = createServerFn({ method: 'POST' })
   .validator(z.object({ postId, statusId: z.string().min(1).max(64) }))
   .handler(async ({ data }) => {
