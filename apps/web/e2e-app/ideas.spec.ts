@@ -417,18 +417,26 @@ test('held for review: an idea and a comment with a link wait for a moderator, a
 })
 
 test('similar ideas show while the title is written (any word matches)', async ({ page }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
+  const token = `zs${Date.now().toString(36)}`
   await signUp(page, 'Similar Writer')
+  await page.goto('/trainer/ideas')
+  await page.waitForLoadState('networkidle')
+  const existing = `E2E teleport ${token} hotkeys`
+  await postIdea(page, existing)
+  await expect(page.getByRole('heading', { level: 1, name: existing })).toBeVisible({
+    timeout: 15_000,
+  })
   await page.goto('/trainer/ideas')
   await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: 'Post an idea' }).click()
   const dialog = page.getByRole('dialog', { name: 'Post an idea' })
   await dialog.getByRole('radio', { name: /An idea/ }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()
-  // the demo seed has "Slack integration"
-  await dialog.getByLabel('Title').fill('Slack notifications')
+  // one word in common is enough
+  await dialog.getByLabel('Title').fill(`A ${token} map`)
   await expect(dialog.getByText('Similar ideas: maybe yours is already here')).toBeVisible()
-  await expect(dialog.getByRole('link', { name: /Slack integration/ }).first()).toBeVisible()
+  await expect(dialog.getByRole('link', { name: new RegExp(existing) })).toBeVisible()
 })
 
 test('a moderator merges a duplicate into the first idea and unmerges it', async ({
