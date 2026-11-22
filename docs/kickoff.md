@@ -103,6 +103,13 @@ reinvent them:
 - Give the owner status updates while long work runs (parallel agents are fine, silence is not); list
   every change with the page/link where it can be seen.
 
+### A component crazy-ui doesn't have yet
+
+Build it in `apps/web/src/app/components/` with **UI SDK** (https://ui-sdk.dev; decision 14): behaviours
+from `@ui-sdk/core` composed into a primitive and rendered with `@ui-sdk/react` (`createParts`), styled with
+crazy-ui's tokens and `tv()`, compound parts plus a one-line form. When it's done, port it to crazy-ui
+(showcase page, tests, changeset) and switch the hub to the library version.
+
 ## Things to move or import
 
 - The trainer repo's `portal/` and `tools/portal/` belong to the old approach; they move out when this
