@@ -24,6 +24,7 @@ import {
   getIdeaPermissionsFn,
   markdownToContentFn,
   pinCommentFn,
+  unmergeIdeaFn,
 } from '@/lib/server/crazy/ideas-functions'
 import { m } from '../../../paraglide/messages.js'
 import { PageFrame } from '../../../components/page'
@@ -34,6 +35,7 @@ import { RichText } from '../../../components/ideas/rich-text'
 import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
 import { IconButton } from '../../../components/icon-button'
 import { AuthorLink } from '../../../components/author-link'
+import { MergedIdeas } from '../../../components/ideas/merged-ideas'
 import { RoleBadges, RoleBadgesProvider, peopleOnPage } from '../../../components/ideas/role-badges'
 import { FollowButton } from '../../../components/ideas/follow-button'
 import { Comments } from '../../../components/ideas/comments'
@@ -96,7 +98,7 @@ function Idea() {
     () => peopleOnPage(post.principalId, post.comments),
     [post.principalId, post.comments]
   )
-  const moderates = !!can && (can.status || can.tags || can.delete || can.comments)
+  const moderates = !!can && (can.status || can.tags || can.delete || can.merge || can.comments)
 
   const queryClient = useQueryClient()
   /** Deletes, then leaves at once: the deleted idea must not stay on screen (owner's note). */
@@ -175,14 +177,28 @@ function Idea() {
           </div>
 
           {post.mergeInfo && (
+            // merged as a duplicate (#37): the discussion and the votes continue on the first idea
             <Alert title={m.ideas_merged()}>
-              <Link
-                to="/$project/ideas/$postId"
-                params={{ project: project.slug, postId: post.mergeInfo.canonicalPostId }}
-                className="underline underline-offset-2"
-              >
-                {post.mergeInfo.canonicalPostTitle}
-              </Link>
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Link
+                  to="/$project/ideas/$postId"
+                  params={{ project: project.slug, postId: post.mergeInfo.canonicalPostId }}
+                  className="font-medium underline underline-offset-2"
+                >
+                  {post.mergeInfo.canonicalPostTitle}
+                </Link>
+                {can?.merge && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      void act(() => unmergeIdeaFn({ data: { postId } }), m.merge_unmerged())
+                    }
+                  >
+                    {m.merge_unmerge()}
+                  </Button>
+                )}
+              </span>
             </Alert>
           )}
 
@@ -262,11 +278,16 @@ function Idea() {
             </Card>
           )}
 
+          {!!post.mergedPostCount && (
+            <MergedIdeas postId={postId} project={project.slug} canUnmerge={!!can?.merge} />
+          )}
+
           <Comments
             postId={post.id}
             comments={post.comments}
             canComment={!!post.canComment}
-            locked={!!post.isCommentsLocked}
+            // a merged idea's discussion goes on at the first idea
+            locked={!!post.isCommentsLocked || !!post.mergeInfo}
             pinnedId={post.pinnedCommentId}
             moderator={!!can?.comments}
           />

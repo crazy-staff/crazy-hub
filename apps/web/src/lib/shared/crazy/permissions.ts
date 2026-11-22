@@ -22,9 +22,11 @@ export const CRAZY_PERMISSIONS = {
   'ideas.tags': { scope: 'project' },
   /** Delete (and restore) ideas of the project. */
   'ideas.delete': { scope: 'project' },
+  /** Merge duplicate ideas into the first one, and unmerge them (#37). */
+  'ideas.merge': { scope: 'project' },
   /** Remove and restore comments, pin the official response, lock comments. */
   'comments.moderate': { scope: 'project' },
-  /** Legacy umbrella of the four above (seeded roles carry it); expands to them. */
+  /** Legacy umbrella of the idea and comment moderation keys (seeded roles carry it); expands to them. */
   'ideas.moderate': { scope: 'project' },
   /** Build the project's roadmaps. */
   'roadmap.manage': { scope: 'project' },
@@ -48,7 +50,13 @@ export const isCrazyPermission = (key: string): key is CrazyPermission => key in
 
 /** What a legacy key stands for. */
 const ALIASES: Partial<Record<CrazyPermission, CrazyPermission[]>> = {
-  'ideas.moderate': ['ideas.status', 'ideas.tags', 'ideas.delete', 'comments.moderate'],
+  'ideas.moderate': [
+    'ideas.status',
+    'ideas.tags',
+    'ideas.delete',
+    'ideas.merge',
+    'comments.moderate',
+  ],
 }
 
 /** The keys an editor offers (aliases are left out: their parts are listed instead). */

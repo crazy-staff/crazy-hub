@@ -69,6 +69,7 @@ export const PERMISSION_LABEL: Record<CrazyPermission, () => string> = {
   'ideas.status': m.perm_ideas_status,
   'ideas.tags': m.perm_ideas_tags,
   'ideas.delete': m.perm_ideas_delete,
+  'ideas.merge': m.perm_ideas_merge,
   'comments.moderate': m.perm_comments_moderate,
   'roadmap.manage': m.perm_roadmap_manage,
   'changelog.publish': m.perm_changelog_publish,

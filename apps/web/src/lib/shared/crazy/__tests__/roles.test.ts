@@ -56,6 +56,7 @@ describe('sanitizePermissions', () => {
       'ideas.status',
       'ideas.tags',
       'ideas.delete',
+      'ideas.merge',
       'comments.moderate',
     ])
     expect(sanitizePermissions(['projects.manage', 'projects.manage'], 'global')).toEqual([
@@ -83,6 +84,7 @@ describe('effectivePermissions', () => {
       'ideas.status',
       'ideas.tags',
       'ideas.delete',
+      'ideas.merge',
       'comments.moderate',
     ])
     expect([...effectivePermissions(assignments, 'ok', 'other')]).toEqual(['docs.edit'])
