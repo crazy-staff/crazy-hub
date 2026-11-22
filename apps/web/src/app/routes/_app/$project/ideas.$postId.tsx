@@ -39,7 +39,8 @@ import { Comments } from '../../../components/ideas/comments'
 import { TagsDialog } from '../../../components/ideas/tags-dialog'
 import { ModerationPanelContent } from '../../../components/ideas/moderation-panel'
 import { SidePanel, SidePanelButton, useSidePanel } from '../../../components/side-panel'
-import { errorMessage } from '../../../lib/admin'
+import { toastError } from '../../../lib/admin'
+import { useDraft } from '../../../lib/drafts'
 import { formatDate, useAct, useMe } from '../../../lib/idea-act'
 import { useIdeaVotes } from '../../../lib/idea-mutations'
 import {
@@ -99,7 +100,7 @@ function Idea() {
     try {
       await deleteIdeaFn({ data: { postId } })
     } catch (err) {
-      toast.error(errorMessage(err))
+      toastError(err)
       return
     }
     await navigate({ to: '/$project/ideas', params: { project: project.slug }, replace: true })
@@ -325,9 +326,15 @@ function EditIdeaDialog({
       version: '',
     }
   })
-  const [title, setTitle] = useState(initialTitle)
-  const [fields, setFields] = useState<Record<string, string>>(initial.fields)
-  const [version, setVersion] = useState(initial.version)
+  // kept in the tab, so it survives the session ending (#5, sign in again)
+  const [form, setForm, clearForm] = useDraft(`edit-idea:${postId}`, {
+    title: initialTitle,
+    fields: initial.fields,
+    version: initial.version,
+  })
+  const { title, fields, version } = form
+  const setTitle = (next: string) => setForm((all) => ({ ...all, title: next }))
+  const setVersion = (next: string) => setForm((all) => ({ ...all, version: next }))
   const [checked, setChecked] = useState(false)
 
   const markdown =
@@ -339,14 +346,19 @@ function EditIdeaDialog({
   const firstKey = initial.kind === 'idea' ? 'what' : initial.kind === 'problem' ? 'happened' : null
   const missing = firstKey ? !(fields[firstKey] ?? '').trim() : false
   const sections = initial.kind === 'idea' ? IDEA_SECTIONS : PROBLEM_SECTIONS
-  const set = (key: string) => (value: string) => setFields((all) => ({ ...all, [key]: value }))
+  const set = (key: string) => (value: string) =>
+    setForm((all) => ({ ...all, fields: { ...all.fields, [key]: value } }))
 
   return (
     <FormDialog
       open
       size="lg"
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) {
+          // closing (after saving, or discarding) forgets the kept draft
+          clearForm()
+          onClose()
+        }
       }}
       title={m.ideas_edit()}
       dirty={

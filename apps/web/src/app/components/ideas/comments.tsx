@@ -39,6 +39,7 @@ import {
 } from '@/lib/server/crazy/ideas-functions'
 import { m } from '../../paraglide/messages.js'
 import { formatDate, useAct, useMe } from '../../lib/idea-act'
+import { useDraft } from '../../lib/drafts'
 import { plainText } from '../../lib/ideas'
 import { AuthorLink } from '../author-link'
 import { openSignIn } from '../auth/auth-dialog'
@@ -156,7 +157,8 @@ function CommentComposer({
   autoFocus?: boolean
 }) {
   const act = useAct(postId)
-  const [draft, setDraft] = useState('')
+  // kept in the tab, so it survives the session ending (#5, sign in again)
+  const [draft, setDraft, clearDraft] = useDraft(`comment:${postId}:${parentId ?? 'new'}`, '')
   const [busy, setBusy] = useState(false)
   const submit = async () => {
     const markdown = draft.trim()
@@ -176,7 +178,7 @@ function CommentComposer({
     })
     setBusy(false)
     if (ok) {
-      setDraft('')
+      clearDraft()
       onDone?.()
     }
   }
@@ -193,7 +195,14 @@ function CommentComposer({
       />
       <div className="flex justify-end gap-2">
         {onDone && (
-          <Button size="sm" variant="ghost" onClick={onDone}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              clearDraft()
+              onDone()
+            }}
+          >
             {m.admin_cancel()}
           </Button>
         )}
@@ -500,7 +509,7 @@ function EditComment({
   onDone: () => void
 }) {
   const act = useAct(postId)
-  const [draft, setDraft] = useState(content)
+  const [draft, setDraft, clearDraft] = useDraft(`edit-comment:${commentId}`, content)
   return (
     <div className="flex flex-col gap-3">
       <MarkdownEditor
@@ -512,7 +521,14 @@ function EditComment({
         autoFocus
       />
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={onDone}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            clearDraft()
+            onDone()
+          }}
+        >
           {m.admin_cancel()}
         </Button>
         <Button
@@ -531,7 +547,10 @@ function EditComment({
               })
               notifyMentions(markdown, commentId)
             })
-            if (ok) onDone()
+            if (ok) {
+              clearDraft()
+              onDone()
+            }
           }}
         >
           {m.settings_save()}

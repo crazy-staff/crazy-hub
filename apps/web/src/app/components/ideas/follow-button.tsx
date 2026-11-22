@@ -14,7 +14,7 @@ import {
   updateSubscriptionLevelFn,
 } from '@/lib/server/functions/subscriptions'
 import { m } from '../../paraglide/messages.js'
-import { errorMessage } from '../../lib/admin'
+import { toastError } from '../../lib/admin'
 import { AdaptiveMenu } from '../adaptive'
 import { IconButton } from '../icon-button'
 
@@ -36,7 +36,7 @@ export function FollowButton({ postId }: { postId: string }) {
       await queryClient.invalidateQueries({ queryKey: key })
       toast.success(next === 'none' ? m.ideas_unfollowed() : m.ideas_followed())
     } catch (err) {
-      toast.error(errorMessage(err))
+      toastError(err)
     }
   }
 

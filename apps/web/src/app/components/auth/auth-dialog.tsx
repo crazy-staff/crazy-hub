@@ -5,6 +5,10 @@
  * and every OAuth provider that is both switched on and registered on the server. A password sign-in
  * to an account with two-factor continues with the code step. Email codes and magic links wait for an
  * email provider.
+ *
+ * With `again` on the URL (#5) it is "sign in again": the session of the person the page was rendered
+ * for ended (`session-watch.tsx`), so it says so, fills in their e-mail and offers no sign-up. A
+ * password sign-in finishes on the same page, so what they typed there is still there.
  */
 import { Alert, Button, Dialog, Field, Input, InputOTP, Separator, Tabs } from '@crazy-staff/ui'
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router'
@@ -16,6 +20,7 @@ import { AUTH_PROVIDERS } from '@/lib/shared/auth-providers'
 import { parseAuthPromptSearch, signinErrorLanding } from '@/lib/shared/auth-prompt'
 import { Route as RootRoute } from '../../root'
 import { m } from '../../paraglide/messages.js'
+import { clearSessionExpired, sessionEmail } from '../../lib/session'
 import { BrandIcon } from './brand-icons'
 
 type Mode = 'login' | 'signup'
@@ -46,6 +51,9 @@ export function AuthDialog() {
   const router = useRouter()
   const settings = useWorkspaceSettings()
   const registered = RootRoute.useRouteContext({ select: (c) => c.registeredAuthProviders })
+  // the e-mail of the session the page was rendered with (the one that ended)
+  const pageEmail = RootRoute.useRouteContext({ select: (c) => c.session?.user?.email ?? '' })
+  const again = prompt.mode === 'login' && (search.again === 1 || search.again === '1')
 
   const open = Boolean(prompt.mode)
   const [mode, setMode] = useState<Mode>(prompt.mode ?? 'login')
@@ -62,7 +70,8 @@ export function AuthDialog() {
     setStep('form')
     setError(undefined)
     setCode('')
-  }, [prompt.mode])
+    if (again) setEmail(sessionEmail() || pageEmail)
+  }, [prompt.mode, again, pageEmail])
 
   const auth = settings?.publicAuthConfig
   const passwordOn = auth?.oauth?.password !== false
@@ -77,19 +86,24 @@ export function AuthDialog() {
   const close = () => {
     setStep('form')
     setError(undefined)
+    clearSessionExpired()
     void navigate({
       to: '.',
       search: (prev: Record<string, unknown>) => {
-        const { auth: _a, callbackUrl: _c, error: _e, ...rest } = prev
+        const { auth: _a, callbackUrl: _c, error: _e, again: _g, ...rest } = prev
         return rest
       },
       replace: true,
+      resetScroll: false,
     })
   }
 
   const done = async () => {
+    clearSessionExpired()
     await router.invalidate()
     setStep('form')
+    // signing in again stays exactly where the person was (search and drafts included)
+    if (again) return close()
     navigateAfterAuth(callbackUrl, () => {
       void navigate({ to: callbackUrl as '/', replace: true })
     })
@@ -170,9 +184,11 @@ export function AuthDialog() {
       ? m.auth_two_factor_title()
       : step === 'forgot' || step === 'reset-sent'
         ? m.auth_forgot_title()
-        : mode === 'signup'
-          ? m.auth_signup_title()
-          : m.auth_signin_title()
+        : again
+          ? m.auth_again_title()
+          : mode === 'signup'
+            ? m.auth_signup_title()
+            : m.auth_signin_title()
   const description =
     step === 'two-factor'
       ? m.auth_two_factor_description()
@@ -180,9 +196,11 @@ export function AuthDialog() {
         ? m.auth_forgot_description()
         : step === 'reset-sent'
           ? undefined
-          : mode === 'signup'
-            ? m.auth_signup_description()
-            : m.auth_signin_description()
+          : again
+            ? m.auth_again_description()
+            : mode === 'signup'
+              ? m.auth_signup_description()
+              : m.auth_signin_description()
 
   return (
     <Dialog
@@ -197,7 +215,7 @@ export function AuthDialog() {
 
         {step === 'form' && (
           <>
-            {signupOpen && (
+            {signupOpen && !again && (
               <Tabs
                 value={mode}
                 onValueChange={(value) => {
@@ -246,6 +264,8 @@ export function AuthDialog() {
                 )}
                 <Field label={m.auth_email()}>
                   <Input
+                    // remounted when "sign in again" fills the address in
+                    key={again ? `again-${email}` : 'email'}
                     name="email"
                     type="email"
                     autoComplete="email"
@@ -261,6 +281,7 @@ export function AuthDialog() {
                     name="password"
                     type="password"
                     required
+                    autoFocus={again && !!email}
                     minLength={mode === 'signup' ? 8 : undefined}
                     autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   />

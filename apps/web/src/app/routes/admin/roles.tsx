@@ -41,8 +41,8 @@ import {
   DISCORD_LABEL,
   PERMISSION_LABEL,
   adminQueries,
-  errorMessage,
   slugify,
+  toastError,
   type CategoryAdmin,
   type PersonAdmin,
   type RoleAdmin,
@@ -69,7 +69,7 @@ function useAction() {
       await router.invalidate()
       if (success) toast.success(success)
     } catch (err) {
-      toast.error(errorMessage(err))
+      toastError(err)
     }
   }
 }

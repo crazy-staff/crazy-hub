@@ -3,7 +3,7 @@ import { toast } from '@crazy-staff/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouteContext } from '@tanstack/react-router'
 import { publicPostsKeys } from '@/lib/client/hooks/use-portal-posts-query'
-import { errorMessage } from './admin'
+import { toastError } from './admin'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 export const formatDate = (value: Date | string) => dateFormat.format(new Date(value))
@@ -21,7 +21,7 @@ export function useAct(postId: string) {
       if (success) toast.success(success)
       return true
     } catch (err) {
-      toast.error(errorMessage(err))
+      toastError(err)
       return false
     }
   }
