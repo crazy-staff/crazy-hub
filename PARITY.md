@@ -11,7 +11,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | Accounts | Sign in / sign up, OAuth providers, profile, preferences                                                                                  | ✅     |
 | Accounts | In-app notifications (no email yet)                                                                                                       | ⬜     |
-| Portal   | Feedback list, filters, post page, comments, up/down votes                                                                                | ⬜     |
+| Portal   | Feedback list, filters, post page, comments, up/down votes                                                                                | ✅     |
 | Portal   | Roadmaps (one per area: trainer, docs, Discord, website, testers)                                                                         | ⬜     |
 | Portal   | Changelog with categories                                                                                                                 | ⬜     |
 | Portal   | Docs (new module, fumadocs-core): project variants (decision 13), search, TOC, contributors                                               | ⬜     |

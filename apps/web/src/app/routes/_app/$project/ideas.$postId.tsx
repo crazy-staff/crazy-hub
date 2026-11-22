@@ -12,7 +12,7 @@ import {
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Pencil, PinOff, ShieldCheck, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { PostId } from '@quackback/ids'
 import { portalDetailQueries } from '@/lib/client/queries/portal-detail'
 import { portalQueries } from '@/lib/client/queries/portal'
@@ -34,6 +34,7 @@ import { RichText } from '../../../components/ideas/rich-text'
 import { MarkdownEditor } from '../../../components/ideas/markdown-editor'
 import { IconButton } from '../../../components/icon-button'
 import { AuthorLink } from '../../../components/author-link'
+import { RoleBadges, RoleBadgesProvider, peopleOnPage } from '../../../components/ideas/role-badges'
 import { FollowButton } from '../../../components/ideas/follow-button'
 import { Comments } from '../../../components/ideas/comments'
 import { TagsDialog } from '../../../components/ideas/tags-dialog'
@@ -91,6 +92,10 @@ function Idea() {
   const [editing, setEditing] = useState(false)
   const status = statuses.find((s) => s.id === post.statusId)
   const mine = !!me && post.principalId === me.principalId
+  const people = useMemo(
+    () => peopleOnPage(post.principalId, post.comments),
+    [post.principalId, post.comments]
+  )
   const moderates = !!can && (can.status || can.tags || can.delete || can.comments)
 
   const queryClient = useQueryClient()
@@ -131,134 +136,142 @@ function Idea() {
         )
       }
     >
-      <article className="flex flex-col gap-8">
-        <div className="flex items-center gap-2">
-          <Link
-            to="/$project/ideas"
-            params={{ project: project.slug }}
-            className="me-auto inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> {m.ideas_back()}
-          </Link>
-          {me && <FollowButton postId={post.id} />}
-          {panel && (
-            <SidePanelButton panel={side} title={m.ideas_moderation()} icon={ShieldCheck}>
-              {panel}
-            </SidePanelButton>
-          )}
-          {/* the author's and the moderators' own buttons stay here; the panel only adds to them */}
-          {(mine || can?.delete) && (
-            <>
-              <IconButton label={m.admin_edit()} onClick={() => setEditing(true)}>
-                <Pencil />
-              </IconButton>
-              <AlertDialog
-                trigger={
-                  <IconButton label={m.admin_delete()} tone="danger">
-                    <Trash2 />
-                  </IconButton>
-                }
-                title={m.ideas_delete_confirm()}
-                cancelLabel={m.admin_cancel()}
-                actionLabel={m.admin_delete()}
-                tone="danger"
-                onAction={() => void removeIdea()}
-              />
-            </>
-          )}
-        </div>
-
-        {post.mergeInfo && (
-          <Alert title={m.ideas_merged()}>
+      <RoleBadgesProvider postId={post.id} principalIds={people}>
+        <article className="flex flex-col gap-8">
+          <div className="flex items-center gap-2">
             <Link
-              to="/$project/ideas/$postId"
-              params={{ project: project.slug, postId: post.mergeInfo.canonicalPostId }}
-              className="underline underline-offset-2"
+              to="/$project/ideas"
+              params={{ project: project.slug }}
+              className="me-auto inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-foreground"
             >
-              {post.mergeInfo.canonicalPostTitle}
+              <ArrowLeft className="size-4" /> {m.ideas_back()}
             </Link>
-          </Alert>
-        )}
-
-        <header className="flex items-start gap-4">
-          <VoteButton
-            postId={post.id}
-            voteCount={votes?.up[post.id] ?? post.voteCount}
-            downvotes={votes?.down[post.id]}
-            mine={votes?.mine[post.id] ?? null}
-            size="lg"
-          />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <h1 className="text-[1.75em] leading-tight font-semibold">{post.title}</h1>
-            <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
-              {status && <StatusChip name={status.name} color={status.color} />}
-              {post.tags.map((tag) => (
-                <Chip key={tag.id} size="sm" variant="neutral">
-                  {tag.name}
-                </Chip>
-              ))}
-              {mine && !can?.tags && (
-                <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} />
-              )}
-              {project.boards.length > 1 && (
-                <Chip size="sm" variant="outline">
-                  {post.board.name}
-                </Chip>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Avatar
-                size="sm"
-                className="size-6"
-                src={post.authorAvatarUrl ?? undefined}
-                name={post.authorName ?? '?'}
-              />
-              <span>
-                <AuthorLink principalId={post.principalId}>{post.authorName ?? '—'}</AuthorLink> ·{' '}
-                {formatDate(post.createdAt)}
-              </span>
-            </div>
+            {me && <FollowButton postId={post.id} />}
+            {panel && (
+              <SidePanelButton panel={side} title={m.ideas_moderation()} icon={ShieldCheck}>
+                {panel}
+              </SidePanelButton>
+            )}
+            {/* the author's and the moderators' own buttons stay here; the panel only adds to them */}
+            {(mine || can?.delete) && (
+              <>
+                <IconButton label={m.admin_edit()} onClick={() => setEditing(true)}>
+                  <Pencil />
+                </IconButton>
+                <AlertDialog
+                  trigger={
+                    <IconButton label={m.admin_delete()} tone="danger">
+                      <Trash2 />
+                    </IconButton>
+                  }
+                  title={m.ideas_delete_confirm()}
+                  cancelLabel={m.admin_cancel()}
+                  actionLabel={m.admin_delete()}
+                  tone="danger"
+                  onAction={() => void removeIdea()}
+                />
+              </>
+            )}
           </div>
-        </header>
 
-        <RichText json={post.contentJson} text={post.content} />
+          {post.mergeInfo && (
+            <Alert title={m.ideas_merged()}>
+              <Link
+                to="/$project/ideas/$postId"
+                params={{ project: project.slug, postId: post.mergeInfo.canonicalPostId }}
+                className="underline underline-offset-2"
+              >
+                {post.mergeInfo.canonicalPostTitle}
+              </Link>
+            </Alert>
+          )}
 
-        {post.pinnedComment && (
-          <Card
-            title={m.ideas_official_response()}
-            className="border-accent/40 bg-accent-soft/30"
-            footer={
-              can?.comments ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
-                >
-                  <PinOff /> {m.ideas_unpin()}
-                </Button>
-              ) : undefined
-            }
-          >
-            <RichText
-              size="sm"
-              json={(post.pinnedComment as { contentJson?: unknown }).contentJson}
-              text={post.pinnedComment.content}
+          <header className="flex items-start gap-4">
+            <VoteButton
+              postId={post.id}
+              voteCount={votes?.up[post.id] ?? post.voteCount}
+              downvotes={votes?.down[post.id]}
+              mine={votes?.mine[post.id] ?? null}
+              size="lg"
             />
-            <p className="mt-3 text-xs text-muted">
-              {post.pinnedComment.authorName ?? '—'} · {formatDate(post.pinnedComment.createdAt)}
-            </p>
-          </Card>
-        )}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <h1 className="text-[1.75em] leading-tight font-semibold">{post.title}</h1>
+              <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
+                {status && <StatusChip name={status.name} color={status.color} />}
+                {post.tags.map((tag) => (
+                  <Chip key={tag.id} size="sm" variant="neutral">
+                    {tag.name}
+                  </Chip>
+                ))}
+                {mine && !can?.tags && (
+                  <TagsDialog postId={postId} current={post.tags.map((t) => t.id)} />
+                )}
+                {project.boards.length > 1 && (
+                  <Chip size="sm" variant="outline">
+                    {post.board.name}
+                  </Chip>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Avatar
+                  size="sm"
+                  className="size-6"
+                  src={post.authorAvatarUrl ?? undefined}
+                  name={post.authorName ?? '?'}
+                />
+                <AuthorLink principalId={post.principalId}>{post.authorName ?? '—'}</AuthorLink>
+                <RoleBadges principalId={post.principalId} />
+                <span>· {formatDate(post.createdAt)}</span>
+              </div>
+            </div>
+          </header>
 
-        <Comments
-          postId={post.id}
-          comments={post.comments}
-          canComment={!!post.canComment}
-          locked={!!post.isCommentsLocked}
-          pinnedId={post.pinnedCommentId}
-          moderator={!!can?.comments}
-        />
-      </article>
+          {post.moderationState === 'pending' && (
+            // held for review (the workspace's moderation settings): only the author and moderators see it
+            <Alert variant="warning" title={m.ideas_held_title()}>
+              {m.ideas_held_text()}
+            </Alert>
+          )}
+
+          <RichText json={post.contentJson} text={post.content} />
+
+          {post.pinnedComment && (
+            <Card
+              title={m.ideas_official_response()}
+              className="border-accent/40 bg-accent-soft/30"
+              footer={
+                can?.comments ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => act(() => pinCommentFn({ data: { postId, commentId: null } }))}
+                  >
+                    <PinOff /> {m.ideas_unpin()}
+                  </Button>
+                ) : undefined
+              }
+            >
+              <RichText
+                size="sm"
+                json={(post.pinnedComment as { contentJson?: unknown }).contentJson}
+                text={post.pinnedComment.content}
+              />
+              <p className="mt-3 text-xs text-muted">
+                {post.pinnedComment.authorName ?? '—'} · {formatDate(post.pinnedComment.createdAt)}
+              </p>
+            </Card>
+          )}
+
+          <Comments
+            postId={post.id}
+            comments={post.comments}
+            canComment={!!post.canComment}
+            locked={!!post.isCommentsLocked}
+            pinnedId={post.pinnedCommentId}
+            moderator={!!can?.comments}
+          />
+        </article>
+      </RoleBadgesProvider>
       {editing && (
         <EditIdeaDialog
           postId={postId}

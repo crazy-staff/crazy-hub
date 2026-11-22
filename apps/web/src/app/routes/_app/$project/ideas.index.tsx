@@ -24,10 +24,12 @@ import { Filter, Lightbulb, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
 import { flattenPublicPosts, usePublicPosts } from '@/lib/client/hooks/use-portal-posts-query'
-import { useSessionContext } from '@/lib/client/hooks/use-root-context'
+import { useSessionContext, useWorkspaceSettings } from '@/lib/client/hooks/use-root-context'
+import { isEmptyTiptapDoc } from '@/lib/shared/utils/is-empty-tiptap-doc'
 import { m } from '../../../paraglide/messages.js'
 import { Page } from '../../../components/page'
 import { IdeaCard } from '../../../components/ideas/idea-card'
+import { RichText } from '../../../components/ideas/rich-text'
 import { NewIdeaWizard } from '../../../components/ideas/new-idea-wizard'
 import { Appear } from '../../../components/appear'
 import { IconButton } from '../../../components/icon-button'
@@ -174,6 +176,8 @@ function Ideas() {
   ) : null
 
   const side = useSidePanel('ideas-admin')
+  // the welcome text from the workspace settings (Quackback's portal welcome card), when there is one
+  const welcome = useWorkspaceSettings()?.publicPortalConfig?.welcomeCard?.body
 
   return (
     <Page
@@ -200,6 +204,14 @@ function Ideas() {
         </>
       }
     >
+      {welcome && !isEmptyTiptapDoc(welcome) && (
+        <section
+          aria-label={m.ideas_welcome()}
+          className="squircle rounded-card border border-border bg-surface px-5 py-4"
+        >
+          <RichText size="sm" json={welcome} />
+        </section>
+      )}
       {project.boards.length > 1 && (
         <Tabs
           value={showAll ? ALL_BOARDS : board?.slug}

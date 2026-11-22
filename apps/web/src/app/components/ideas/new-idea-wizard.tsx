@@ -6,15 +6,19 @@
  * only moderators decide (priority, status, …) is not asked. Closing with changes asks first.
  */
 import { Button, Chip, Dialog, Field, Input, Select, cn } from '@crazy-staff/ui'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Bug, Check, Lightbulb, Pencil, type LucideIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { portalQueries } from '@/lib/client/queries/portal'
-import { useSimilarPosts } from '@/lib/client/hooks/use-similar-posts'
-import { markdownToContentFn, setIdeaTagsFn } from '@/lib/server/crazy/ideas-functions'
+import {
+  findSimilarIdeasFn,
+  markdownToContentFn,
+  setIdeaTagsFn,
+} from '@/lib/server/crazy/ideas-functions'
 import { m } from '../../paraglide/messages.js'
 import { useDiscardGuard } from '../form-dialog'
+import { useDebouncedValue } from '../../lib/use-debounced'
 import type { HubProject } from '../../lib/projects'
 import { useCreateIdea } from '../../lib/idea-mutations'
 import { errorMessage } from '../../lib/admin'
@@ -73,9 +77,17 @@ export function NewIdeaWizard({
   const texts = kind === 'problem' ? Object.values(problem) : Object.values(idea)
   const dirty = kind !== null || title.trim() !== '' || texts.some((t) => t.trim() !== '')
   const guard = useDiscardGuard(dirty && !busy)
-  const similar = useSimilarPosts({ title })
-  const boardSlugs = new Set(project.boards.map((b) => b.slug))
-  const matches = (similar.posts ?? []).filter((p) => boardSlugs.has(p.boardSlug))
+  // ideas like the title (any word matches; Quackback's search needs embeddings for that)
+  const settledTitle = useDebouncedValue(title.trim(), 400)
+  const matches =
+    useQuery({
+      queryKey: ['crazy', 'similar-ideas', project.slug, settledTitle],
+      queryFn: () => findSimilarIdeasFn({ data: { project: project.slug, title: settledTitle } }),
+      enabled: settledTitle.length >= 3,
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
+    }).data ?? []
+  const shownMatches = title.trim().length >= 3 ? matches : []
 
   const categories = useMemo(
     () =>
@@ -164,7 +176,7 @@ export function NewIdeaWizard({
           </Dialog.Title>
         </Dialog.Header>
         <StepIndicator step={step} onPick={goTo} />
-        <Dialog.Body className="mt-2 flex min-h-80 flex-col gap-6">
+        <Dialog.Body className="mt-2 flex min-h-80 shrink-0 flex-col gap-6">
           {step === 0 && (
             <div
               className="grid gap-3 sm:grid-cols-2"
@@ -278,17 +290,17 @@ export function NewIdeaWizard({
                   onChange={(e) => setTitle(e.currentTarget.value)}
                 />
               </Field>
-              {matches.length > 0 && (
+              {shownMatches.length > 0 && (
                 <div className="-mt-2 flex flex-col gap-1 rounded-control border border-border p-3 text-sm">
                   <span className="text-xs font-medium text-muted">{m.ideas_similar()}</span>
-                  {matches.map((post) => (
+                  {shownMatches.map((post) => (
                     <Link
                       key={post.id}
                       to="/$project/ideas/$postId"
                       params={{ project: project.slug, postId: post.id }}
                       className="flex items-center gap-2 rounded-control-sm px-1 py-0.5 hover:bg-hover"
                     >
-                      <span className="w-8 shrink-0 text-end text-xs tabular-nums text-muted">
+                      <span className="w-12 shrink-0 text-end text-xs whitespace-nowrap tabular-nums text-muted">
                         ▲ {post.voteCount}
                       </span>
                       <span className="truncate">{post.title}</span>
